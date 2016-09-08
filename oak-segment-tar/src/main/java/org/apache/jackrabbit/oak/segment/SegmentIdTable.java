@@ -90,14 +90,30 @@ public class SegmentIdTable {
     @Nonnull
     synchronized SegmentId newSegmentId(long msb, long lsb, SegmentIdFactory maker) {
         int index = getIndex(lsb);
+
+        // UUID u0 = new UUID(msb,  lsb);
+
         boolean shouldRefresh = false;
 
         WeakReference<SegmentId> reference = references.get(index);
+
+        int i0 = index;
+        WeakReference<SegmentId> r0 = reference;
+
         while (reference != null) {
             SegmentId id = reference.get();
             if (id != null
                     && id.getMostSignificantBits() == msb
                     && id.getLeastSignificantBits() == lsb) {
+
+                if (i0 != index) {
+                    //swap
+//                    System.err.println("[" + u0 + "] found "
+//                            + i0 + " -> " + index);
+                    references.set(index, r0);
+                    references.set(i0, reference);
+                }
+
                 return id;
             }
             // shouldRefresh if we have a garbage collected entry
@@ -108,7 +124,20 @@ public class SegmentIdTable {
         }
 
         SegmentId id = maker.newSegmentId(msb, lsb);
-        references.set(index, new WeakReference<SegmentId>(id));
+        // references.set(index, new WeakReference<SegmentId>(id));
+
+        if (index != i0) {
+            //TODO broke it
+            // System.err.println("[" + u0 + "] linear probe set late " +
+            // initial
+            // + " -> " + index);
+
+            references.set(index, r0);
+            references.set(i0, new WeakReference<SegmentId>(id));
+        } else {
+            references.set(index, new WeakReference<SegmentId>(id));
+        }
+
         entryCount++;
         if (entryCount > references.size() * 0.75) {
             // more than 75% full            
