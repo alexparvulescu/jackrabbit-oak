@@ -252,6 +252,11 @@ public class CopyVersionHistoryTest extends AbstractRepositoryUpgradeTest {
 
         assertMissingHistories(session,
                 VERSIONABLES_OLD, VERSIONABLES_OLD_ORPHANED, VERSIONABLES_YOUNG, VERSIONABLES_YOUNG_ORPHANED);
+
+ //       System.err.println(session.getNode("/jcr:system"));
+ //       System.err.println(session.getNode("/jcr:system/jcr:versionStorage"));
+        // assertNotNull(session.getNode("/jcr:system/jcr:versionStorage").getPrimaryNodeType());
+
     }
 
     protected Session performCopy(VersionCopySetup setup) throws RepositoryException, IOException {
@@ -394,4 +399,40 @@ public class CopyVersionHistoryTest extends AbstractRepositoryUpgradeTest {
         // after restoring, the paths should be still versionable
         assertVersionablePaths(session, names);
     }
+
+    @Test
+    public void dontCopyVersionHistoryMixed() throws RepositoryException, IOException {
+        // first don't copy version history, then copy for some items only
+
+        Session session = performCopy(new VersionCopySetup() {
+            @Override
+            public void setup(VersionCopyConfiguration config) {
+                config.setCopyVersions(null);
+                config.setCopyOrphanedVersions(null);
+            }
+        });
+
+        assertMissingHistories(session,
+                VERSIONABLES_OLD, VERSIONABLES_OLD_ORPHANED, VERSIONABLES_YOUNG, VERSIONABLES_YOUNG_ORPHANED);
+
+        System.err.println(session.getNode("/jcr:system"));
+        System.err.println(session.getNode("/jcr:system/jcr:versionStorage"));
+
+        session = performCopy(new VersionCopySetup() {
+            @Override
+            public void setup(VersionCopyConfiguration config) {
+                config.setCopyVersions(betweenHistories);
+                config.setCopyOrphanedVersions(null);
+            }
+        });
+        assertVersionableProperties(session, VERSIONABLES_YOUNG);
+        assertExistingHistories(session, VERSIONABLES_YOUNG);
+        assertVersionablePaths(session, VERSIONABLES_YOUNG);
+        assertMissingHistories(session, VERSIONABLES_OLD, VERSIONABLES_OLD_ORPHANED, VERSIONABLES_YOUNG_ORPHANED);
+        assertVersionsCanBeRestored(session, VERSIONABLES_YOUNG);
+        
+        System.err.println(session.getNode("/jcr:system"));
+        System.err.println(session.getNode("/jcr:system/jcr:versionStorage"));
+    }
+
 }
