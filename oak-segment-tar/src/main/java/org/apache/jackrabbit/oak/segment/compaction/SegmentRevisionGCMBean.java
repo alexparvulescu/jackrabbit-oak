@@ -201,4 +201,24 @@ public class SegmentRevisionGCMBean
     public void setRevisionGCProgressLog(long gcProgressLog) {
         gcOptions.getGCNodeWriteMonitor().setGcProgressLog(gcProgressLog);
     }
+
+    @Override
+    public long getRevisionGCSleepCycle() {
+        return gcOptions.getGCNodeWriteMonitor().getSleepCycle();
+    }
+
+    @Override
+    public void setRevisionGCSleepCycle(long sleepCycle) {
+        gcOptions.getGCNodeWriteMonitor().setSleepCycle(sleepCycle);
+    }
+
+    @Override
+    public long getRevisionGCSleepMsPerCycle() {
+        return gcOptions.getGCNodeWriteMonitor().getSleepMsPerCycle();
+    }
+
+    @Override
+    public void setRevisionGCSleepMsPerCycle(long sleepMsPerCycle) {
+        gcOptions.getGCNodeWriteMonitor().setSleepMsPerCycle(sleepMsPerCycle);
+    }
 }

@@ -18,6 +18,8 @@
  */
 package org.apache.jackrabbit.oak.segment.file;
 
+import java.util.concurrent.TimeUnit;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,6 +38,16 @@ public class GCNodeWriteMonitor {
      * Number of nodes the monitor will log a message, -1 to disable
      */
     private long gcProgressLog;
+
+    /**
+     * Number of nodes the monitor will log a message, -1 to disable
+     */
+    private long sleepCycle = Long.getLong("oak.segment.compaction.gcSleepCycle", -1);
+
+    /**
+     * Ms to sleep at each cycle, -1 to disable
+     */
+    private long sleepMsPerCycle= Long.getLong("oak.segment.compaction.gcSleepMsPerCycle", -1);
 
     /**
      * Start timestamp of compaction (reset at each {@code init()} call).
@@ -66,6 +78,13 @@ public class GCNodeWriteMonitor {
             long ms = System.currentTimeMillis() - start;
             log.info("TarMK GC #{}: compacted {} nodes in {} ms.", gcCount, nodes, ms);
             start = System.currentTimeMillis();
+        }
+        if (sleepCycle > 0 && nodes % sleepCycle == 0) {
+            try {
+                TimeUnit.MILLISECONDS.sleep(sleepMsPerCycle);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 
@@ -139,5 +158,21 @@ public class GCNodeWriteMonitor {
 
     public void setGcProgressLog(long gcProgressLog) {
         this.gcProgressLog = gcProgressLog;
+    }
+
+    public synchronized long getSleepCycle() {
+        return sleepCycle;
+    }
+
+    public synchronized void setSleepCycle(long sleepCycle) {
+        this.sleepCycle = sleepCycle;
+    }
+
+    public synchronized long getSleepMsPerCycle() {
+        return sleepMsPerCycle;
+    }
+
+    public synchronized void setSleepMsPerCycle(long sleepMsPerCycle) {
+        this.sleepMsPerCycle = sleepMsPerCycle;
     }
 }

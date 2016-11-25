@@ -204,4 +204,28 @@ public interface SegmentRevisionGC {
      *            number of nodes
      */
     public void setRevisionGCProgressLog(long gcProgressLog);
+
+    /**
+     * @return Number of nodes the monitor will artificially sleep, {@code -1} means disabled
+     */
+    public long getRevisionGCSleepCycle();
+
+    /**
+     * Set the size of the sleep interval, {@code -1} means disabled
+     * @param sleepCycle
+     *            number of nodes
+     */
+    public void setRevisionGCSleepCycle(long sleepCycle);
+
+    /**
+     * @return Ms to sleep at each cycle, {@code -1} means disabled
+     */
+    public long getRevisionGCSleepMsPerCycle();
+
+    /**
+     * Set the ms value to sleep on each cycle, {@code -1} means disabled
+     * @param sleepMsPerCycle
+     *            ms to sleep
+     */
+    public void setRevisionGCSleepMsPerCycle(long sleepMsPerCycle);
 }
