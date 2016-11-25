@@ -35,6 +35,12 @@ public class GCNodeWriteMonitor {
     public static final GCNodeWriteMonitor EMPTY = new GCNodeWriteMonitor(-1);
 
     /**
+     * Flag to control behavior of timeouts, replace {@code Thread.sleep()} with
+     * {@code Thread.yield()}
+     */
+    private static final boolean gcSleepYield = Boolean.getBoolean("oak.segment.compaction.gcSleepYield");
+
+    /**
      * Number of nodes the monitor will log a message, -1 to disable
      */
     private long gcProgressLog;
@@ -80,10 +86,14 @@ public class GCNodeWriteMonitor {
             start = System.currentTimeMillis();
         }
         if (sleepCycle > 0 && nodes % sleepCycle == 0) {
-            try {
-                TimeUnit.MILLISECONDS.sleep(sleepMsPerCycle);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+            if (gcSleepYield) {
+                Thread.yield();
+            } else {
+                try {
+                    TimeUnit.MILLISECONDS.sleep(sleepMsPerCycle);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
             }
         }
     }
