@@ -74,6 +74,11 @@ public class GCNodeWriteMonitor {
 
     private long gcCount;
 
+    /**
+     * Enabled by the force compact call on the store, will skip any sleep settings
+     */
+    private boolean forceMode = false;
+
     public GCNodeWriteMonitor(long gcProgressLog) {
         this.gcProgressLog = gcProgressLog;
     }
@@ -85,7 +90,7 @@ public class GCNodeWriteMonitor {
             log.info("TarMK GC #{}: compacted {} nodes in {} ms.", gcCount, nodes, ms);
             start = System.currentTimeMillis();
         }
-        if (sleepCycle > 0 && nodes % sleepCycle == 0) {
+        if (!forceMode && sleepCycle > 0 && nodes % sleepCycle == 0) {
             if (gcSleepYield) {
                 Thread.yield();
             } else {
@@ -122,6 +127,7 @@ public class GCNodeWriteMonitor {
         nodes = 0;
         start = System.currentTimeMillis();
         running = true;
+        forceMode = false;
     }
 
     public synchronized void finished() {
@@ -184,5 +190,9 @@ public class GCNodeWriteMonitor {
 
     public synchronized void setSleepMsPerCycle(long sleepMsPerCycle) {
         this.sleepMsPerCycle = sleepMsPerCycle;
+    }
+
+    public synchronized void forceCompact() {
+        this.forceMode = true;
     }
 }

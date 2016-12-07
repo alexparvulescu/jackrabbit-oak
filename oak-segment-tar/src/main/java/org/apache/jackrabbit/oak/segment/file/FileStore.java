@@ -871,7 +871,7 @@ public class FileStore extends AbstractFileStore {
                                 GC_COUNT, forceTimeout);
                         gcListener.updateStatus(COMPACTION_FORCE_COMPACT.message());
                         Stopwatch forceWatch = Stopwatch.createStarted();
-                        
+                        compactionMonitor.forceCompact();
                         cycles++;
                         success = forceCompact(writer, or(cancel, timeOut(forceTimeout, SECONDS)));
                         if (success) {
