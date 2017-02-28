@@ -31,20 +31,27 @@ import org.apache.jackrabbit.oak.stats.MeterStats;
 import org.apache.jackrabbit.oak.stats.StatisticsProvider;
 import org.apache.jackrabbit.oak.stats.StatsOptions;
 
+import com.google.common.base.Supplier;
+
 public class FileStoreStats implements FileStoreStatsMBean, FileStoreMonitor {
     public static final String SEGMENT_REPO_SIZE = "SEGMENT_REPO_SIZE";
     public static final String SEGMENT_WRITES = "SEGMENT_WRITES";
     public static final String JOURNAL_WRITES = "JOURNAL_WRITES";
     
     private final StatisticsProvider statisticsProvider;
-    private final FileStore store;
     private final MeterStats writeStats;
     private final CounterStats repoSize;
     private final MeterStats journalWriteStats;
-    
-    public FileStoreStats(StatisticsProvider statisticsProvider, FileStore store, long initialSize) {
+    private final Supplier<Integer> readerCount;
+
+    public FileStoreStats(StatisticsProvider statisticsProvider, final AbstractFileStore store, long initialSize) {
         this.statisticsProvider = statisticsProvider;
-        this.store = store;
+        this.readerCount = new Supplier<Integer>() {
+            @Override
+            public Integer get() {
+                return store.readerCount() + 1; // 1 for the writer
+            }
+        };
         this.writeStats = statisticsProvider.getMeter(SEGMENT_WRITES, StatsOptions.DEFAULT);
         this.repoSize = statisticsProvider.getCounterStats(SEGMENT_REPO_SIZE, StatsOptions.DEFAULT);
         this.journalWriteStats = statisticsProvider.getMeter(JOURNAL_WRITES, StatsOptions.DEFAULT);
@@ -82,7 +89,7 @@ public class FileStoreStats implements FileStoreStatsMBean, FileStoreMonitor {
 
     @Override
     public int getTarFileCount() {
-        return store.readerCount() + 1; //1 for the writer
+        return readerCount.get();
     }
 
     @Nonnull

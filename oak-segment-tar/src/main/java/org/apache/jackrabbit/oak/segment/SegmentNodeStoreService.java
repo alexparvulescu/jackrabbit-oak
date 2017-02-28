@@ -43,6 +43,7 @@ import static org.apache.jackrabbit.oak.segment.SegmentNodeStoreService.MEMORY_T
 import static org.apache.jackrabbit.oak.segment.SegmentNodeStoreService.MODE;
 import static org.apache.jackrabbit.oak.segment.SegmentNodeStoreService.NODE_DEDUPLICATION_CACHE_SIZE;
 import static org.apache.jackrabbit.oak.segment.SegmentNodeStoreService.PAUSE_COMPACTION;
+import static org.apache.jackrabbit.oak.segment.SegmentNodeStoreService.PERSISTENCE_TYPE;
 import static org.apache.jackrabbit.oak.segment.SegmentNodeStoreService.PROP_BLOB_GC_MAX_AGE;
 import static org.apache.jackrabbit.oak.segment.SegmentNodeStoreService.PROP_BLOB_SNAPSHOT_INTERVAL;
 import static org.apache.jackrabbit.oak.segment.SegmentNodeStoreService.REPOSITORY_HOME_DIRECTORY;
@@ -111,7 +112,7 @@ import org.apache.jackrabbit.oak.plugins.identifier.ClusterRepositoryInfo;
 import org.apache.jackrabbit.oak.segment.compaction.SegmentGCOptions;
 import org.apache.jackrabbit.oak.segment.compaction.SegmentRevisionGC;
 import org.apache.jackrabbit.oak.segment.compaction.SegmentRevisionGCMBean;
-import org.apache.jackrabbit.oak.segment.file.FileStore;
+import org.apache.jackrabbit.oak.segment.file.AbstractFileStore;
 import org.apache.jackrabbit.oak.segment.file.FileStoreBuilder;
 import org.apache.jackrabbit.oak.segment.file.FileStoreGCMonitor;
 import org.apache.jackrabbit.oak.segment.file.FileStoreStatsMBean;
@@ -170,6 +171,14 @@ public class SegmentNodeStoreService {
                     "Default value is taken from the 'sun.arch.data.model' system property."
     )
     public static final String MODE = "tarmk.mode";
+
+    @Property(
+            value = "filestore",
+            label = "Persistence Type",
+            description = "TarMK persistence type ('filestore', 'memory-filestore', 'ro-filestore'). " +
+                    "Default value is 'filestore'."
+    )
+    public static final String PERSISTENCE_TYPE = "tarmk.persistenceType";
 
     @Property(
             intValue = DEFAULT_MAX_FILE_SIZE,
@@ -463,9 +472,9 @@ public class SegmentNodeStoreService {
             builder.withSnfeListener(IGNORE_SNFE);
         }
 
-        final FileStore store;
+        final AbstractFileStore store;
         try {
-            store = builder.build();
+            store = builder.build(configuration.property(PERSISTENCE_TYPE));
         } catch (InvalidFileStoreVersionException e) {
             log.error("The storage format is not compatible with this version of Oak Segment Tar", e);
             return null;

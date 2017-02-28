@@ -39,6 +39,7 @@ import static org.apache.jackrabbit.oak.spi.state.AbstractNodeState.checkValidNa
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.annotation.CheckForNull;
@@ -46,6 +47,8 @@ import javax.annotation.Nonnull;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableSet;
+
 import org.apache.jackrabbit.oak.api.PropertyState;
 import org.apache.jackrabbit.oak.api.Type;
 import org.apache.jackrabbit.oak.plugins.memory.EmptyNodeState;
@@ -104,6 +107,22 @@ public class SegmentNodeState extends Record implements NodeState {
         return template;
     }
 
+    private volatile Set<String> childNodesMeta;
+
+    private Set<String> getChildNodesMeta() {
+        if (childNodesMeta == null) {
+            String childName = getTemplate().getChildName();
+            if (childName == Template.ZERO_CHILD_NODES) {
+                childNodesMeta = ImmutableSet.of();
+            } else if (childName == Template.MANY_CHILD_NODES) {
+                childNodesMeta = ImmutableSet.copyOf(getChildNodeMap().getKeys());
+            } else {
+                return childNodesMeta = ImmutableSet.of(childName);
+            }
+        }
+        return childNodesMeta;
+    }
+
     MapRecord getChildNodeMap() {
         Segment segment = getSegment();
         return reader.readMap(segment.readRecordId(getRecordNumber(), 0, 2));
@@ -117,7 +136,7 @@ public class SegmentNodeState extends Record implements NodeState {
      * @return  stable id
      */
     String getStableId() {
-        ByteBuffer buffer = ByteBuffer.wrap(getStableIdBytes());
+        ByteBuffer buffer = getStableIdBytes();
         long msb = buffer.getLong();
         long lsb = buffer.getLong();
         int offset = buffer.getInt();
@@ -132,7 +151,7 @@ public class SegmentNodeState extends Record implements NodeState {
      *
      * @return the stable ID of this node.
      */
-    byte[] getStableIdBytes() {
+    ByteBuffer getStableIdBytes() {
         // The first record id of this node points to the stable id.
         RecordId id = getSegment().readRecordId(getRecordNumber());
 
@@ -144,9 +163,7 @@ public class SegmentNodeState extends Record implements NodeState {
         } else {
             // Otherwise that id points to the serialised (msb, lsb, offset)
             // stable id.
-            byte[] buffer = new byte[RecordId.SERIALIZED_RECORD_ID_BYTES];
-            id.getSegment().readBytes(id.getRecordNumber(), buffer, 0, buffer.length);
-            return buffer;
+            return id.getSegment().readBytes(id.getRecordNumber(), 0, RecordId.SERIALIZED_RECORD_ID_BYTES);
         }
     }
 
@@ -383,26 +400,12 @@ public class SegmentNodeState extends Record implements NodeState {
 
     @Override
     public long getChildNodeCount(long max) {
-        String childName = getTemplate().getChildName();
-        if (childName == Template.ZERO_CHILD_NODES) {
-            return 0;
-        } else if (childName == Template.MANY_CHILD_NODES) {
-            return getChildNodeMap().size();
-        } else {
-            return 1;
-        }
+        return getChildNodesMeta().size();
     }
 
     @Override
     public boolean hasChildNode(@Nonnull String name) {
-        String childName = getTemplate().getChildName();
-        if (childName == Template.ZERO_CHILD_NODES) {
-            return false;
-        } else if (childName == Template.MANY_CHILD_NODES) {
-            return getChildNodeMap().getEntry(name) != null;
-        } else {
-            return childName.equals(name);
-        }
+        return getChildNodesMeta().contains(name);
     }
 
     @Override @Nonnull
@@ -424,14 +427,7 @@ public class SegmentNodeState extends Record implements NodeState {
 
     @Override @Nonnull
     public Iterable<String> getChildNodeNames() {
-        String childName = getTemplate().getChildName();
-        if (childName == Template.ZERO_CHILD_NODES) {
-            return Collections.emptyList();
-        } else if (childName == Template.MANY_CHILD_NODES) {
-            return getChildNodeMap().getKeys();
-        } else {
-            return Collections.singletonList(childName);
-        }
+        return getChildNodesMeta();
     }
 
     @Override @Nonnull

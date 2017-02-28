@@ -371,6 +371,49 @@ public class FileStoreBuilder {
     }
 
     @Nonnull
+    public InMemoryFileStore buildInMemory() throws InvalidFileStoreVersionException, IOException {
+        checkState(!built, "Cannot re-use builder");
+        built = true;
+        directory.mkdirs();
+        TarRevisions revisions = new TarRevisions(directory);
+
+        withMemoryMapping(false);
+        withSegmentCacheSize(Integer.MAX_VALUE);
+
+        withTemplateCacheSize(-1);
+        withStringCacheSize(2048);
+        LOG.info("Creating in-memory file store {}", this);
+
+        InMemoryFileStore store;
+        try {
+            store = new InMemoryFileStore(this);
+        } catch (InvalidFileStoreVersionException | IOException e) {
+            try {
+                revisions.close();
+            } catch (IOException re) {
+                LOG.warn("Unable to close TarRevisions", re);
+            }
+            throw e;
+        }
+        store.bind(revisions);
+        return store;
+    }
+
+    @Nonnull
+    public AbstractFileStore build(String type) throws InvalidFileStoreVersionException, IOException {
+        if ("filestore".equals(type)) {
+            return build();
+        }
+        if ("memory-filestore".equals(type)) {
+            return buildInMemory();
+        }
+        if ("ro-filestore".equals(type)) {
+            return buildReadOnly();
+        }
+        throw new RuntimeException("Unknown FileStore persistence type");
+    }
+
+    @Nonnull
     File getDirectory() {
         return directory;
     }

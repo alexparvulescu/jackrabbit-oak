@@ -25,7 +25,7 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
 import org.apache.jackrabbit.oak.commons.jmx.AnnotatedStandardMBean;
-import org.apache.jackrabbit.oak.segment.file.FileStore;
+import org.apache.jackrabbit.oak.segment.file.AbstractFileStore;
 import org.apache.jackrabbit.oak.segment.file.FileStoreGCMonitor;
 
 public class SegmentRevisionGCMBean
@@ -33,7 +33,7 @@ public class SegmentRevisionGCMBean
         implements SegmentRevisionGC {
 
     @Nonnull
-    private final FileStore fileStore;
+    private final AbstractFileStore fileStore;
 
     @Nonnull
     private final SegmentGCOptions gcOptions;
@@ -42,7 +42,7 @@ public class SegmentRevisionGCMBean
     private final FileStoreGCMonitor fileStoreGCMonitor;
 
     public SegmentRevisionGCMBean(
-            @Nonnull FileStore fileStore,
+            @Nonnull AbstractFileStore fileStore,
             @Nonnull SegmentGCOptions gcOptions,
             @Nonnull FileStoreGCMonitor fileStoreGCMonitor) {
         super(SegmentRevisionGC.class);

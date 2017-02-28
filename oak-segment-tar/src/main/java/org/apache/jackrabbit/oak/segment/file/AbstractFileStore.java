@@ -21,6 +21,7 @@ package org.apache.jackrabbit.oak.segment.file;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Maps.newHashMap;
+import static java.lang.String.format;
 
 import java.io.Closeable;
 import java.io.File;
@@ -41,6 +42,7 @@ import javax.annotation.Nonnull;
 import com.google.common.base.Supplier;
 import org.apache.commons.io.FileUtils;
 import org.apache.jackrabbit.oak.api.jmx.CacheStatsMBean;
+import org.apache.jackrabbit.oak.plugins.blob.ReferenceCollector;
 import org.apache.jackrabbit.oak.segment.CachingSegmentReader;
 import org.apache.jackrabbit.oak.segment.RecordType;
 import org.apache.jackrabbit.oak.segment.Revisions;
@@ -314,5 +316,59 @@ public abstract class AbstractFileStore implements SegmentStore, Closeable {
         }
         return new Segment(tracker, segmentReader, id, buffer);
     }
+
+    // ---- GC RELATED METHODS
+
+    /**
+     * @return  a runnable for running garbage collection
+     */
+    public Runnable getGCRunner() {
+        return new SafeRunnable(format("TarMK revision gc [%s]", directory), new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    gc();
+                } catch (IOException e) {
+                    log.error("Error running revision garbage collection", e);
+                }
+            }
+        });
+    }
+
+    /**
+     * Run garbage collection: estimation, compaction, cleanup
+     * @throws IOException
+     */
+    public void gc() throws IOException {
+    }
+
+    /**
+     * Cancel a running revision garbage collection compaction process as soon as possible.
+     * Does nothing if gc is not running.
+     */
+    public void cancelGC() {
+    }
+
+    /**
+     * Finds all external blob references that are currently accessible
+     * in this repository and adds them to the given collector. Useful
+     * for collecting garbage in an external data store.
+     * <p>
+     * Note that this method only collects blob references that are already
+     * stored in the repository (at the time when this method is called), so
+     * the garbage collector will need some other mechanism for tracking
+     * in-memory references and references stored while this method is
+     * running.
+     * @param collector  reference collector called back for each blob reference found
+     */
+    public void collectBlobReferences(ReferenceCollector collector) throws IOException {
+    }
+
+    // ---- STATS METHODS
+
+    @Nonnull
+    public abstract FileStoreStats getStats();
+
+    protected abstract int readerCount();
 
 }

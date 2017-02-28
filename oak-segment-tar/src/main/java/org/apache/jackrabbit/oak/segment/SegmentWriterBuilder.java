@@ -27,6 +27,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.jackrabbit.oak.segment.WriterCacheManager.Empty;
 import org.apache.jackrabbit.oak.segment.file.FileStore;
+import org.apache.jackrabbit.oak.segment.file.InMemoryFileStore;
 import org.apache.jackrabbit.oak.segment.file.ReadOnlyFileStore;
 import org.apache.jackrabbit.oak.segment.memory.MemoryStore;
 
@@ -195,6 +196,21 @@ public final class SegmentWriterBuilder {
         );
     }
 
+    /**
+     * Build a {@code SegmentWriter} for a {@code InMemoryFileStore}.
+     */
+    @Nonnull
+    public SegmentWriter build(@Nonnull InMemoryFileStore store) {
+        return new SegmentWriter(
+                checkNotNull(store),
+                store.getReader(),
+                store.getSegmentIdProvider(),
+                store.getBlobStore(),
+                cacheManager,
+                createWriter(store, pooled)
+        );
+    }
+
     @Nonnull
     private WriteOperationHandler createWriter(@Nonnull FileStore store, boolean pooled) {
         if (pooled) {
@@ -233,4 +249,22 @@ public final class SegmentWriterBuilder {
         }
     }
 
+    @Nonnull
+    private WriteOperationHandler createWriter(@Nonnull InMemoryFileStore store, boolean pooled) {
+        if (pooled) {
+            return new SegmentBufferWriterPool(
+                    store.getSegmentIdProvider(),
+                    store.getReader(),
+                    name,
+                    generation
+            );
+        } else {
+            return new SegmentBufferWriter(
+                    store.getSegmentIdProvider(),
+                    store.getReader(),
+                    name,
+                    generation.get()
+            );
+        }
+    }
 }

@@ -22,8 +22,7 @@ package org.apache.jackrabbit.oak.segment;
 import javax.annotation.Nonnull;
 
 import org.apache.jackrabbit.oak.segment.SegmentNodeStore.SegmentNodeStoreBuilder;
-import org.apache.jackrabbit.oak.segment.file.FileStore;
-import org.apache.jackrabbit.oak.segment.file.ReadOnlyFileStore;
+import org.apache.jackrabbit.oak.segment.file.AbstractFileStore;
 import org.apache.jackrabbit.oak.segment.memory.MemoryStore;
 
 /**
@@ -34,10 +33,10 @@ public final class SegmentNodeStoreBuilders {
     private SegmentNodeStoreBuilders() {}
 
     /**
-     * Create a {@code SegmentNodeStoreBuilder} based on a {@code FileStore}.
+     * Create a {@code SegmentNodeStoreBuilder} based on a {@code AbstractFileStore}.
      */
     @Nonnull
-    public static SegmentNodeStoreBuilder builder(@Nonnull FileStore store) {
+    public static SegmentNodeStoreBuilder builder(@Nonnull AbstractFileStore store) {
         return SegmentNodeStore.builder(store.getRevisions(),
                 store.getReader(), store.getWriter(), store.getBlobStore());
     }
@@ -47,15 +46,6 @@ public final class SegmentNodeStoreBuilders {
      */
     @Nonnull
     public static SegmentNodeStoreBuilder builder(@Nonnull MemoryStore store) {
-        return SegmentNodeStore.builder(store.getRevisions(),
-                store.getReader(), store.getWriter(), store.getBlobStore());
-    }
-
-    /**
-     * Create a {@code SegmentNodeStoreBuilder} based on a {@code ReadOnlyFileStore@}.
-     */
-    @Nonnull
-    public static SegmentNodeStoreBuilder builder(@Nonnull ReadOnlyFileStore store) {
         return SegmentNodeStore.builder(store.getRevisions(),
                 store.getReader(), store.getWriter(), store.getBlobStore());
     }

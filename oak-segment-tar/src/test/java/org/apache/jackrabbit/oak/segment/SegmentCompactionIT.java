@@ -85,7 +85,10 @@ import org.apache.jackrabbit.oak.segment.compaction.SegmentRevisionGCMBean;
 import org.apache.jackrabbit.oak.segment.file.FileStore;
 import org.apache.jackrabbit.oak.segment.file.FileStoreBuilder;
 import org.apache.jackrabbit.oak.segment.file.FileStoreGCMonitor;
+import org.apache.jackrabbit.oak.segment.file.InMemoryFileStore;
 import org.apache.jackrabbit.oak.segment.file.MetricsIOMonitor;
+import org.apache.jackrabbit.oak.segment.file.AbstractFileStore;
+import org.apache.jackrabbit.oak.segment.file.FileStoreGCMonitor;
 import org.apache.jackrabbit.oak.spi.commit.CommitHook;
 import org.apache.jackrabbit.oak.spi.commit.CommitInfo;
 import org.apache.jackrabbit.oak.spi.commit.CompositeHook;
@@ -124,8 +127,11 @@ public class SegmentCompactionIT {
     }
 
     /** Only run if explicitly asked to via -Dtest=SegmentCompactionIT */
-    private static final boolean ENABLED =
-            SegmentCompactionIT.class.getSimpleName().equals(getProperty("test"));
+    private static final boolean ENABLED = true;
+            // SegmentCompactionIT.class.getSimpleName().equals(getProperty("test"));
+
+    // memory-filestore vs filestore
+    private static final String TYPE = System.getProperty("SegmentCompactionIT.persistenceType", "memory-filestore");
 
     private static final Logger LOG = LoggerFactory.getLogger(SegmentCompactionIT.class);
 
@@ -141,14 +147,14 @@ public class SegmentCompactionIT {
     private final Set<ListenableScheduledFuture<?>> references = newConcurrentHashSet();
     private final SegmentCompactionITMBean segmentCompactionMBean = new SegmentCompactionITMBean();
 
-    private FileStore fileStore;
+    private AbstractFileStore fileStore;
     private SegmentNodeStore nodeStore;
     private Registration mBeanRegistration;
 
     private volatile ListenableFuture<?> compactor = immediateCancelledFuture();
     private volatile ReadWriteLock compactionLock = null;
     private volatile int maxReaders = Integer.getInteger("SegmentCompactionIT.maxReaders", 10);
-    private volatile int maxWriters = Integer.getInteger("SegmentCompactionIT.maxWriters", 10);
+    private volatile int maxWriters = Integer.getInteger("SegmentCompactionIT.maxWriters", 25);
     private volatile long maxStoreSize = 200000000000L;
     private volatile int maxBlobSize = 1000000;
     private volatile int maxStringSize = 100;
@@ -237,7 +243,7 @@ public class SegmentCompactionIT {
                 .withGCOptions(gcOptions)
                 .withIOMonitor(new MetricsIOMonitor(statisticsProvider))
                 .withStatisticsProvider(statisticsProvider)
-                .build();
+                .build(TYPE);
         nodeStore = SegmentNodeStoreBuilders.builder(fileStore)
                 .withStatisticsProvider(statisticsProvider)
                 .build();
@@ -289,7 +295,7 @@ public class SegmentCompactionIT {
     }
 
     @After
-    public void tearDown() {
+    public void tearDown() throws IOException {
         if (mBeanRegistration != null) {
             mBeanRegistration.unregister();
         }
@@ -659,10 +665,10 @@ public class SegmentCompactionIT {
     }
 
     private class Compactor implements Runnable {
-        private final FileStore fileStore;
+        private final AbstractFileStore fileStore;
         private final TestGCMonitor gcMonitor;
 
-        Compactor(FileStore fileStore, TestGCMonitor gcMonitor) {
+        Compactor(AbstractFileStore fileStore, TestGCMonitor gcMonitor) {
             this.fileStore = fileStore;
             this.gcMonitor = gcMonitor;
         }

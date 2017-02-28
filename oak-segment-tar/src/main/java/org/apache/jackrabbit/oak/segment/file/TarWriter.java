@@ -36,6 +36,8 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
+import java.util.Deque;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -195,7 +197,7 @@ class TarWriter implements Closeable {
      */
     ByteBuffer readEntry(long msb, long lsb) throws IOException {
         checkState(!closed);
-        
+
         TarEntry entry;
         synchronized (this) {
             entry = index.get(new UUID(msb, lsb));
@@ -205,6 +207,7 @@ class TarWriter implements Closeable {
             ByteBuffer data = ByteBuffer.allocate(entry.size());
             channel.read(data, entry.offset());
             data.rewind();
+            log.info("read entry {}", new UUID(msb, lsb));
             return data;
         } else {
             return null;
@@ -223,8 +226,53 @@ class TarWriter implements Closeable {
         String entryName = String.format("%s.%08x", uuid, checksum.getValue());
         byte[] header = newEntryHeader(entryName, size);
 
-        log.debug("Writing segment {} to {}", uuid, file);
-        return writeEntry(uuid, header, data, offset, size, generation);
+        log.info("Writing segment {} to {}", uuid, file);
+        return writeEntryCached(uuid, header, data, offset, size, generation);
+    }
+
+    private final int maxBufferSize = Integer.getInteger("oak.TarWriter.buffer", -1);
+
+    private int bufferSize = 0;
+
+    private final Deque<CachedTarEntry> buffer = new LinkedList<>();
+
+    private static class CachedTarEntry {
+        
+        //TODO replace this class with the real TarEntry
+        private final UUID uuid;
+        private final byte[] header;
+        private final byte[] data;
+        private final int offset;
+        private final int size;
+        private final int generation;
+
+        public CachedTarEntry(UUID uuid, byte[] header, byte[] data, int offset, int size, int generation) {
+            this.uuid = uuid;
+            this.header = header;
+            this.data = data;
+            this.offset = offset;
+            this.size = size;
+            this.generation = generation;
+        }
+    }
+
+    private synchronized long writeEntryCached(UUID uuid, byte[] header, byte[] data, int offset, int size,
+            int generation) throws IOException {
+        if (maxBufferSize > 0) {
+            long initialLength = 0;
+            if (access != null) {
+                initialLength = access.getFilePointer();
+            }
+            int padding = getPaddingSize(size);
+            int headerSize = header.length;
+
+            CachedTarEntry cte = new CachedTarEntry(uuid, header, data, offset, size, generation);
+
+            long currentLength = initialLength + padding + headerSize + size;
+            return currentLength;
+        } else {
+            return writeEntry(uuid, header, data, offset, size, generation);
+        }
     }
 
     private synchronized long writeEntry(UUID uuid, byte[] header, byte[] data, int offset, int size, int generation) throws IOException {
@@ -373,6 +421,7 @@ class TarWriter implements Closeable {
         }
         close();
         int newIndex = writeIndex + 1;
+        log.info("created next generation {}", newIndex);
         return new TarWriter(file.getParentFile(), monitor, newIndex, ioMonitor);
     }
 

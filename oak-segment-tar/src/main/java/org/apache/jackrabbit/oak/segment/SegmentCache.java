@@ -29,6 +29,7 @@ import org.apache.jackrabbit.oak.segment.CacheWeights.SegmentCacheWeigher;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.RemovalCause;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
@@ -64,21 +65,31 @@ public class SegmentCache {
      * @param cacheSizeMB  size of the cache in megabytes.
      */
     public SegmentCache(long cacheSizeMB) {
-        this.maximumWeight = cacheSizeMB * 1024 * 1024;
-        this.cache = CacheBuilder.newBuilder()
+        final boolean ismax = Integer.MAX_VALUE == cacheSizeMB;
+        CacheBuilder<SegmentId, Segment> cb = 
+        CacheBuilder.newBuilder()
                 .concurrencyLevel(16)
                 .recordStats()
-                .maximumWeight(maximumWeight)
-                .weigher(weigher)
                 .removalListener(new RemovalListener<SegmentId, Segment>() {
                     @Override
                     public void onRemoval(@Nonnull RemovalNotification<SegmentId, Segment> notification) {
+                        if (ismax && !notification.getCause().equals(RemovalCause.EXPLICIT)) {
+                            throw new RuntimeException("Should never remove items!");
+                        }
                         SegmentId id = notification.getKey();
                         if (id != null) {
                             id.unloaded();
                         }
                     }
-                }).build();
+                });
+        if(!ismax) {
+            this.maximumWeight = cacheSizeMB * 1024 * 1024;
+            cb.maximumWeight(maximumWeight);
+            cb.weigher(weigher);
+        } else{
+            this.maximumWeight = Long.MAX_VALUE;
+        }
+        this.cache = cb.build();
     }
 
     /**

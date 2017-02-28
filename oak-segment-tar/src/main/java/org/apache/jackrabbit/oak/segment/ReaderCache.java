@@ -69,13 +69,22 @@ public abstract class ReaderCache<T> {
             @Nonnull String name, @Nonnull Weigher<CacheKey, T> weigher) {
         this.name = checkNotNull(name);
         this.weigher = checkNotNull(weigher);
-        fastCache = new FastCache<>();
-        cache = CacheLIRS.<CacheKey, T>newBuilder()
-                .module(name)
-                .maximumWeight(maxWeight)
-                .averageWeight(averageWeight)
-                .weigher(weigher)
-                .build();
+        if(maxWeight < 0) {
+            fastCache = null;
+            cache = CacheLIRS.<CacheKey, T>newBuilder()
+                    .module(name)
+                    .maximumWeight(1)
+                    .averageWeight(1)
+                    .build();
+        } else {
+            fastCache = new FastCache<>();
+            cache = CacheLIRS.<CacheKey, T>newBuilder()
+                    .module(name)
+                    .maximumWeight(maxWeight)
+                    .averageWeight(averageWeight)
+                    .weigher(weigher)
+                    .build();
+        }
     }
 
     @Nonnull

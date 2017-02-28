@@ -155,6 +155,84 @@ public class MapRecord extends Record {
         return getSize(head);
     }
 
+    boolean hasEntry(String name) {
+        checkNotNull(name);
+        int hash = getHash(name);
+        Segment segment = getSegment();
+
+        int head = segment.readInt(getRecordNumber());
+        if (isDiff(head)) {
+            if (hash == segment.readInt(getRecordNumber(), 4)) {
+                RecordId key = segment.readRecordId(getRecordNumber(), 8);
+                if (name.equals(reader.readString(key))) {
+                    return true;
+                }
+            }
+            RecordId base = segment.readRecordId(getRecordNumber(), 8, 2);
+            return reader.readMap(base).hasEntry(name);
+        }
+
+        int size = getSize(head);
+        if (size == 0) {
+            return false; // shortcut
+        }
+
+        int level = getLevel(head);
+        if (isBranch(size, level)) {
+            // this is an intermediate branch record
+            // check if a matching bucket exists, and recurse 
+            int bitmap = segment.readInt(getRecordNumber(), 4);
+            int mask = (1 << BITS_PER_LEVEL) - 1;
+            int shift = 32 - (level + 1) * BITS_PER_LEVEL;
+            int index = (hash >> shift) & mask;
+            int bit = 1 << index;
+            if ((bitmap & bit) != 0) {
+                int ids = bitCount(bitmap & (bit - 1));
+                RecordId id = segment.readRecordId(getRecordNumber(), 8, ids);
+                return reader.readMap(id).hasEntry(name);
+            } else {
+                return false;
+            }
+        }
+
+        // use interpolation search to find the matching entry in this map leaf
+        int shift = 32 - level * BITS_PER_LEVEL;
+        long mask = -1L << shift;
+        long h = hash & HASH_MASK;
+        int p = 0;
+        long pH = h & mask;   // lower bound on hash values in this map leaf
+        int q = size - 1;
+        long qH = pH | ~mask; // upper bound on hash values in this map leaf
+        while (p <= q) {
+            assert pH <= qH;
+
+            // interpolate the most likely index of the target entry
+            // based on its hash code and the lower and upper bounds
+            int i = p + (int) ((q - p) * (h - pH) / (qH - pH));
+            assert p <= i && i <= q;
+
+            long iH = segment.readInt(getRecordNumber(), 4 + i * 4) & HASH_MASK;
+            int diff = Long.valueOf(iH).compareTo(h);
+            if (diff == 0) {
+                RecordId keyId = segment.readRecordId(getRecordNumber(), 4 + size * 4, i * 2);
+                // TODO 
+                diff = reader.readString(keyId).compareTo(name);
+                if (diff == 0) {
+                    return true;
+                }
+            }
+
+            if (diff < 0) {
+                p = i + 1;
+                pH = iH;
+            } else {
+                q = i - 1;
+                qH = iH;
+            }
+        }
+        return false;
+    }
+
     MapEntry getEntry(String name) {
         checkNotNull(name);
         int hash = getHash(name);
@@ -216,6 +294,7 @@ public class MapRecord extends Record {
             int diff = Long.valueOf(iH).compareTo(h);
             if (diff == 0) {
                 RecordId keyId = segment.readRecordId(getRecordNumber(), 4 + size * 4, i * 2);
+                // TODO 
                 RecordId valueId = segment.readRecordId(getRecordNumber(), 4 + size * 4, i * 2 + 1);
                 diff = reader.readString(keyId).compareTo(name);
                 if (diff == 0) {

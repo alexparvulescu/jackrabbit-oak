@@ -60,6 +60,8 @@ public class ReadOnlyFileStore extends AbstractFileStore {
 
     private RecordId currentHead;
 
+    private final FileStoreStats stats;
+
     ReadOnlyFileStore(FileStoreBuilder builder) throws InvalidFileStoreVersionException, IOException {
         super(builder);
 
@@ -76,6 +78,8 @@ public class ReadOnlyFileStore extends AbstractFileStore {
                 .build();
 
         writer = segmentWriterBuilder("read-only").withoutCache().build(this);
+        this.stats = new FileStoreStats(builder.getStatsProvider(), this, size());
+
         log.info("TarMK ReadOnly opened: {} (mmap={})", directory,
                 memoryMapping);
     }
@@ -178,5 +182,19 @@ public class ReadOnlyFileStore extends AbstractFileStore {
 
     public Set<SegmentId> getReferencedSegmentIds() {
         return tracker.getReferencedSegmentIds();
+    }
+
+    @Override
+    public FileStoreStats getStats() {
+        return stats;
+    }
+
+    private long size() {
+        return tarFiles.size();
+    }
+
+    @Override
+    protected int readerCount() {
+        return tarFiles.readerCount();
     }
 }

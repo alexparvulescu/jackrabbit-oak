@@ -17,10 +17,14 @@
 
 package org.apache.jackrabbit.oak.segment.file;
 
+import static com.google.common.collect.Sets.newHashSet;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 import org.apache.jackrabbit.oak.segment.RecordId;
 import org.apache.jackrabbit.oak.segment.SegmentId;
@@ -121,4 +125,22 @@ class FileStoreUtil {
         return null;
     }
 
+    /**
+     * Include the ids of all segments transitively reachable through forward
+     * references from {@code referencedIds}. See OAK-3864.
+     */
+    static void includeForwardReferences(Iterable<TarReader> readers,
+            Set<UUID> referencedIds) throws IOException {
+        Set<UUID> fRefs = newHashSet(referencedIds);
+        do {
+            // Add direct forward references
+            for (TarReader reader : readers) {
+                reader.calculateForwardReferences(fRefs);
+                if (fRefs.isEmpty()) {
+                    break; // Optimisation: bail out if no references left
+                }
+            }
+            // ... as long as new forward references are found.
+        } while (referencedIds.addAll(fRefs));
+    }
 }
