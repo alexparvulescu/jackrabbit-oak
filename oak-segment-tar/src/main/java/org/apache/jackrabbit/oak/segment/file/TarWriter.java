@@ -47,6 +47,8 @@ import java.util.zip.CRC32;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Stopwatch;
+
+import org.apache.jackrabbit.oak.segment.file.TarEntry.TarEntryLite;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -151,7 +153,7 @@ class TarWriter implements Closeable {
      * <p>
      * Should only be accessed from synchronized code.
      */
-    private final Map<UUID, TarEntry> index = newLinkedHashMap();
+    private final Map<UUID, TarEntryLite> index = newLinkedHashMap();
 
     /**
      * List of binary references contained in this TAR file.
@@ -210,8 +212,8 @@ class TarWriter implements Closeable {
      */
     ByteBuffer readEntry(long msb, long lsb) throws IOException {
         checkState(!closed);
-        
-        TarEntry entry;
+
+        TarEntryLite entry;
         synchronized (this) {
             entry = index.get(new UUID(msb, lsb));
         }
@@ -272,7 +274,7 @@ class TarWriter implements Closeable {
         monitor.written(currentLength - initialLength);
 
         checkState(currentLength <= Integer.MAX_VALUE);
-        TarEntry entry = new TarEntry(msb, lsb, (int) (currentLength - size - padding), size, generation);
+        TarEntryLite entry = new TarEntryLite((int) (currentLength - size - padding), size, generation);
         index.put(uuid, entry);
 
         return currentLength;
@@ -564,11 +566,12 @@ class TarWriter implements Closeable {
         byte[] header = newEntryHeader(indexName, indexSize + padding);
 
         ByteBuffer buffer = ByteBuffer.allocate(indexSize);
-        TarEntry[] sorted = index.values().toArray(new TarEntry[index.size()]);
+        UUID[] sorted = index.keySet().toArray(new UUID[index.size()]);
         Arrays.sort(sorted, TarEntry.IDENTIFIER_ORDER);
-        for (TarEntry entry : sorted) {
-            buffer.putLong(entry.msb());
-            buffer.putLong(entry.lsb());
+        for (UUID id : sorted) {
+            TarEntryLite entry = index.get(id);
+            buffer.putLong(id.getMostSignificantBits());
+            buffer.putLong(id.getLeastSignificantBits());
             buffer.putInt(entry.offset());
             buffer.putInt(entry.size());
             buffer.putInt(entry.generation());

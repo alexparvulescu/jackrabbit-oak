@@ -19,6 +19,7 @@
 package org.apache.jackrabbit.oak.segment.file;
 
 import java.util.Comparator;
+import java.util.UUID;
 
 /**
  * A file entry location in a tar file. This is used for the index with a tar
@@ -42,16 +43,16 @@ class TarEntry {
         }
     };
 
-    static final Comparator<TarEntry> IDENTIFIER_ORDER = new Comparator<TarEntry>() {
+    static final Comparator<UUID> IDENTIFIER_ORDER = new Comparator<UUID>() {
         @Override
-        public int compare(TarEntry a, TarEntry b) {
-            if (a.msb > b.msb) {
+        public int compare(UUID a, UUID b) {
+            if (a.getMostSignificantBits() > b.getMostSignificantBits()) {
                 return 1;
-            } else if (a.msb < b.msb) {
+            } else if (a.getMostSignificantBits() < b.getMostSignificantBits()) {
                 return -1;
-            } else if (a.lsb > b.lsb) {
+            } else if (a.getLeastSignificantBits() > b.getLeastSignificantBits()) {
                 return 1;
-            } else if (a.lsb < b.lsb) {
+            } else if (a.getLeastSignificantBits() < b.getLeastSignificantBits()) {
                 return -1;
             } else {
                 return 0;
@@ -95,6 +96,33 @@ class TarEntry {
 
     int generation() {
         return generation;
+    }
+
+    public static class TarEntryLite {
+
+        private final int offset;
+
+        private final int size;
+
+        private final int generation;
+
+        TarEntryLite(int offset, int size, int generation) {
+            this.offset = offset;
+            this.size = size;
+            this.generation = generation;
+        }
+
+        int offset() {
+            return offset;
+        }
+
+        int size() {
+            return size;
+        }
+
+        int generation() {
+            return generation;
+        }
     }
 
 }

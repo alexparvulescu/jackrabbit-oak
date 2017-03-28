@@ -652,7 +652,7 @@ class TarReader implements Closeable {
     }
 
     @Nonnull
-    private static List<UUID> getReferences(TarEntry entry, UUID id, Map<UUID, List<UUID>> graph) {
+    private static List<UUID> getReferences(UUID id, Map<UUID, List<UUID>> graph) {
         List<UUID> references = graph.get(id);
 
         if (references == null) {
@@ -681,7 +681,7 @@ class TarReader implements Closeable {
             UUID id = new UUID(entry.msb(), entry.lsb());
             if (roots.remove(id) && isDataSegmentId(entry.lsb())) {
                 // this is a referenced data segment, so follow the graph
-                for (UUID refId : getReferences(entry, id, graph)) {
+                for (UUID refId : getReferences(id, graph)) {
                     visitor.accept(id, refId);
                     roots.add(refId);
                 }
@@ -709,7 +709,7 @@ class TarReader implements Closeable {
             UUID id = new UUID(entry.msb(), entry.lsb());
             if (referencedIds.remove(id)) {
                 if (isDataSegmentId(entry.lsb())) {
-                    referencedIds.addAll(getReferences(entry, id, graph));
+                    referencedIds.addAll(getReferences(id, graph));
                 }
             }
         }
@@ -771,7 +771,7 @@ class TarReader implements Closeable {
                 reclaim.add(id);
             } else {
                 if (isDataSegmentId(entry.lsb())) {
-                    for (UUID refId : getReferences(entry, id, graph)) {
+                    for (UUID refId : getReferences(id, graph)) {
                         if (!isDataSegmentId(refId.getLeastSignificantBits())) {
                             // keep the extra check for bulk segments for the case where a
                             // pre-compiled graph is not available (graph == null) and
