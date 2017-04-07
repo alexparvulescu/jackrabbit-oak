@@ -291,7 +291,6 @@ public class FileStore extends AbstractFileStore {
     }
 
     /**
-<<<<<<< HEAD
      * @return  a runnable for running garbage collection
      */
     public Runnable getGCRunner() {
@@ -314,7 +313,7 @@ public class FileStore extends AbstractFileStore {
         return tarFiles.size();
     }
 
-    public int readerCount() {
+    public int readerCount(){
         return tarFiles.readerCount();
     }
 
