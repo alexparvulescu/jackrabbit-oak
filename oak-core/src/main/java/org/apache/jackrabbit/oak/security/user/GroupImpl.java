@@ -48,6 +48,14 @@ class GroupImpl extends AuthorizableImpl implements Group {
 
     private static final Logger log = LoggerFactory.getLogger(GroupImpl.class);
 
+    static boolean USE_NEW = Boolean.getBoolean("GroupImpl.useNew");
+    static {
+        if (USE_NEW) {
+            log.info("'GroupImpl.useNew' flag enabled.");
+            System.err.println("'GroupImpl.useNew' flag enabled.");
+        }
+    }
+
     GroupImpl(String id, Tree tree, UserManagerImpl userManager) throws RepositoryException {
         super(id, tree, userManager);
     }

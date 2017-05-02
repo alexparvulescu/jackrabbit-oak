@@ -781,6 +781,7 @@
  */
 [rep:MemberReferencesList]
   + * (rep:MemberReferences) = rep:MemberReferences protected COPY
+  + * (rep:MemberReferencesList) = rep:MemberReferences protected COPY /* @since oak 1.7.0 */
 
 /**
  * @since oak 1.4

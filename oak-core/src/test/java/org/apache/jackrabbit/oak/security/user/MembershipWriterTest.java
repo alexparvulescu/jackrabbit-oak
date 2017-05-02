@@ -56,7 +56,7 @@ public class MembershipWriterTest extends MembershipBaseTest {
     @Before
     public void before() throws Exception {
         super.before();
-        writer = new MembershipWriter();
+        writer = new MembershipWriter(false);
         // set the threshold low for testing
         writer.setMembershipSizeThreshold(SIZE_TH);
     }
