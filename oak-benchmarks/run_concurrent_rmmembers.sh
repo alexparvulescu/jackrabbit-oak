@@ -15,11 +15,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-TITLE=AddMembersTest_besteffort
-BENCH="AddMembersTest"
+TITLE=RemoveMembersTest
+BENCH="RemoveMembersTest"
 BATCH_SIZE="1 10" # 10 50 100 500
-IMPORT_BEHAVIOR="besteffort" # ignore abort"
-MEMBERS_CNT="50 100 150 500" # 1 10 100 500 1000 5000 10000
+MEMBERS_CNT="50 100 150" # 1 10 100 500 1000 5000 10000
 RUNTIME=60
 FIXS="Oak-Segment-Tar"
 THREADS="1" #"1,2,4,8,10,15,20,50"
@@ -47,12 +46,12 @@ for bm in $BENCH
             echo "Executing benchmarks with $noMembers members with batchsize $batchsize on $importBehavior" | tee -a $LOG
             echo "-----------------------------------------------------------" | tee -a $LOG
             rm -rf target/Jackrabbit-* target/Oak-Tar-*
-            cmd="java -Xmx2048m -Druntime=$RUNTIME -jar target/oak-benchmarks-*-SNAPSHOT.jar benchmark --batchSize $batchsize --importBehavior $IMPORT_BEHAVIOR --numberOfUsers $noMembers --csvFile $LOG --concurrency $THREADS --report false $bm $FIXS"
+            cmd="java -Xmx2048m -Druntime=$RUNTIME -jar target/oak-benchmarks-*-SNAPSHOT.jar benchmark --batchSize $batchsize --numberOfUsers $noMembers --csvFile $LOG --concurrency $THREADS --report false $bm $FIXS"
             echo $cmd
             $cmd
 
             rm -rf target/Jackrabbit-* target/Oak-Tar-*
-            cmd2="java -Xmx2048m -DGroupImpl.useNew=true -Druntime=$RUNTIME -jar target/oak-benchmarks-*-SNAPSHOT.jar benchmark --batchSize $batchsize --importBehavior $IMPORT_BEHAVIOR --numberOfUsers $noMembers --csvFile $LOG --concurrency $THREADS --report false $bm $FIXS"
+            cmd2="java -Xmx2048m -DGroupImpl.useNew=true -Druntime=$RUNTIME -jar target/oak-benchmarks-*-SNAPSHOT.jar benchmark --batchSize $batchsize --numberOfUsers $noMembers --csvFile $LOG --concurrency $THREADS --report false $bm $FIXS"
             echo $cmd2
             $cmd2
 

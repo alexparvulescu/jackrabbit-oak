@@ -15,8 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-TITLE=AddMembersTest_besteffort
-BENCH="AddMembersTest"
+TITLE=AddUniqueMembersTest_besteffort
+BENCH="AddUniqueMembersTest"
 BATCH_SIZE="1 10" # 10 50 100 500
 IMPORT_BEHAVIOR="besteffort" # ignore abort"
 MEMBERS_CNT="50 100 150 500" # 1 10 100 500 1000 5000 10000

@@ -16,7 +16,9 @@
  */
 package org.apache.jackrabbit.oak.security.user;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -107,7 +109,7 @@ class MembershipProvider extends AuthorizableBaseProvider {
 
     private static final Logger log = LoggerFactory.getLogger(MembershipProvider.class);
 
-    private final MembershipWriter writer = new MembershipWriter();
+    private final MembershipWriter writer;
 
     /**
      * Creates a new membership provider
@@ -116,6 +118,11 @@ class MembershipProvider extends AuthorizableBaseProvider {
      */
     MembershipProvider(@Nonnull Root root, @Nonnull ConfigurationParameters config) {
         super(root, config);
+        if (GroupImpl.USE_NEW) {
+            writer = new MembershipTreeWriter();
+        } else {
+            writer = new MembershipWriter();
+        }
     }
 
     /**
@@ -387,14 +394,25 @@ class MembershipProvider extends AuthorizableBaseProvider {
      */
     private abstract class MemberReferenceIterator extends AbstractLazyIterator<String> {
 
-        private final Iterator<Tree> trees;
+        private final Deque<Tree> trees;
+        private Tree tree;
         private Iterator<String> propertyValues;
 
         private MemberReferenceIterator(@Nonnull Tree groupTree) {
-            this.trees = Iterators.concat(
-                    Iterators.singletonIterator(groupTree),
-                    groupTree.getChild(REP_MEMBERS_LIST).getChildren().iterator()
-            );
+            this.trees = new ArrayDeque<>();
+            trees.push(groupTree);
+        }
+
+        private Tree getTree() {
+            if (tree == null) {
+                tree = trees.poll();
+                if (tree != null) {
+                    for (Tree c : tree.getChildren()) {
+                        trees.push(c);
+                    }
+                }
+            }
+            return tree;
         }
 
         @Override
@@ -403,17 +421,21 @@ class MembershipProvider extends AuthorizableBaseProvider {
             while (next == null) {
                 if (propertyValues == null) {
                     // check if there are more trees that can provide a rep:members property
-                    if (!trees.hasNext()) {
+                    Tree t = getTree();
+                    if (t == null) {
                         // if not, we're done
                         break;
                     }
-                    PropertyState property = trees.next().getProperty(REP_MEMBERS);
+                    PropertyState property = t.getProperty(REP_MEMBERS);
                     if (property != null) {
                         propertyValues = property.getValue(Type.STRINGS).iterator();
+                    } else {
+                        tree = null;
                     }
                 } else if (!propertyValues.hasNext()) {
                     // if there are no more values left, reset the iterator
                     propertyValues = null;
+                    tree = null;
                 } else {
                     String value = propertyValues.next();
                     if (hasProcessedReference(value)) {
