@@ -25,6 +25,7 @@ import java.util.Set;
 
 import org.apache.jackrabbit.api.security.user.Group;
 import org.apache.jackrabbit.oak.api.Tree;
+import org.apache.jackrabbit.oak.security.user.MembershipWriter.TreeWriter;
 import org.junit.Test;
 
 import com.google.common.collect.Maps;
@@ -38,14 +39,58 @@ public class MembershipWriterTestIT extends MembershipBaseTest {
         Group grp = createGroup();
 
         // [TREE]
-        // [ADD] 1000 times x 5 items. duration 35 ms.
-        // [ADD] 1000 times x 50 items. duration 532 ms. // TODO
-        // [ADD] 1000 times x 500 items. duration 4982 ms. // TODO
+        // [ADD] #0 1000 times x 5 items. duration 51 ms.
+        // [ADD] #1 1000 times x 5 items. duration 27 ms.
+        // [ADD] #2 1000 times x 5 items. duration 36 ms.
+        // [ADD] #3 1000 times x 5 items. duration 40 ms.
+        // [ADD] #4 1000 times x 5 items. duration 51 ms.
+        // [ADD] #5 1000 times x 5 items. duration 29 ms.
+        // [ADD] #6 1000 times x 5 items. duration 26 ms.
+        // [ADD] #7 1000 times x 5 items. duration 27 ms.
+        // [ADD] #8 1000 times x 5 items. duration 38 ms.
+        // [ADD] #9 1000 times x 5 items. duration 21 ms.
+        // [ADD] #10 1000 times x 5 items. duration 17 ms.
+        // [ADD] #11 1000 times x 5 items. duration 12 ms.
+        // [ADD] #12 1000 times x 5 items. duration 18 ms.
+        // [ADD] #13 1000 times x 5 items. duration 17 ms.
+        // [ADD] #14 1000 times x 5 items. duration 25 ms.
+        // [ADD] #15 1000 times x 5 items. duration 16 ms.
+        // [ADD] #16 1000 times x 5 items. duration 15 ms.
+        // [ADD] #17 1000 times x 5 items. duration 13 ms.
+        // [ADD] #18 1000 times x 5 items. duration 17 ms.
+        // [ADD] #19 1000 times x 5 items. duration 19 ms.
+        // [ADD] #20 1000 times x 5 items. duration 29 ms.
+        // [ADD] #21 1000 times x 5 items. duration 36 ms.
+        // [ADD] #22 1000 times x 5 items. duration 35 ms.
+        // [ADD] #23 1000 times x 5 items. duration 40 ms.
+        // [ADD] #24 1000 times x 5 items. duration 43 ms.
 
         // [LIST]
-        // [ADD] 1000 times x 5 items. duration 156 ms. // TODO
-        // [ADD] 1000 times x 50 items. duration 777 ms. // TODO
-        // [ADD] 1000 times x 500 items. duration 11557 ms. // TODO
+        // [ADD] #0 1000 times x 5 items. duration 120 ms.
+        // [ADD] #1 1000 times x 5 items. duration 200 ms.
+        // [ADD] #2 1000 times x 5 items. duration 248 ms.
+        // [ADD] #3 1000 times x 5 items. duration 347 ms.
+        // [ADD] #4 1000 times x 5 items. duration 415 ms.
+        // [ADD] #5 1000 times x 5 items. duration 476 ms.
+        // [ADD] #6 1000 times x 5 items. duration 659 ms.
+        // [ADD] #7 1000 times x 5 items. duration 736 ms.
+        // [ADD] #8 1000 times x 5 items. duration 790 ms.
+        // [ADD] #9 1000 times x 5 items. duration 860 ms.
+        // [ADD] #10 1000 times x 5 items. duration 946 ms.
+        // [ADD] #11 1000 times x 5 items. duration 1053 ms.
+        // [ADD] #12 1000 times x 5 items. duration 1154 ms.
+        // [ADD] #13 1000 times x 5 items. duration 1269 ms.
+        // [ADD] #14 1000 times x 5 items. duration 1624 ms.
+        // [ADD] #15 1000 times x 5 items. duration 1692 ms.
+        // [ADD] #16 1000 times x 5 items. duration 1633 ms.
+        // [ADD] #17 1000 times x 5 items. duration 1754 ms.
+        // [ADD] #18 1000 times x 5 items. duration 1888 ms.
+        // [ADD] #19 1000 times x 5 items. duration 2201 ms.
+        // [ADD] #20 1000 times x 5 items. duration 2369 ms.
+        // [ADD] #21 1000 times x 5 items. duration 2442 ms.
+        // [ADD] #22 1000 times x 5 items. duration 2652 ms.
+        // [ADD] #23 1000 times x 5 items. duration 2820 ms.
+        // [ADD] #24 1000 times x 5 items. duration 2983 ms.
 
         int times = 1000;
         int size = 5;
@@ -54,23 +99,22 @@ public class MembershipWriterTestIT extends MembershipBaseTest {
         MembershipWriter writer = new MembershipWriter(useTreeWriter);
         Tree t = getTree(grp);
 
-        while (true) {
+        for (int op = 0; op < 25; op++) {
             long total = 0;
             for (int c = 0; c < times; c++) {
-                long start = System.currentTimeMillis();
-
                 Map<String, String> idMap = Maps.newHashMap();
                 for (int i = 0; i < size; i++) {
                     String memberId = "user" + System.currentTimeMillis() + "-" + c + "-" + i;
                     idMap.put(getContentID(memberId), memberId);
                 }
+                long start = System.currentTimeMillis();
                 Set<String> res = writer.addMembers(t, idMap);
-
                 long dur = System.currentTimeMillis() - start;
                 total += dur;
                 assertTrue("unable to add " + res, res.isEmpty());
             }
-            System.err.println("[ADD] " + times + " times x " + size + " items. duration " + total + " ms.");
+            System.err
+                    .println("[ADD] #" + op + " " + times + " times x " + size + " items. duration " + total + " ms.");
         }
     }
 
@@ -81,17 +125,15 @@ public class MembershipWriterTestIT extends MembershipBaseTest {
         Group grp = createGroup();
 
         // [TREE]
-        // [ADD] 10000 times x 5 samples | 50 items. duration 18ms. (inlined as
-        // a mvp)
-        // [ADD] 10000 times x 5 samples | 150 items. duration 40ms.
-        // [ADD] 10000 times x 50 samples | 150 items. duration 230ms.
-        // [ADD] 10000 times x 150 samples | 150 items. duration 400ms.
+        // [ADD] 10000 times x 5 samples | 50 items. duration 10ms. (inlined)
+        // [ADD] 10000 times x 5 samples | 150 items. duration 42ms
+        // [ADD] 10000 times x 50 samples | 150 items. duration 210ms
+        // [ADD] 10000 times x 150 samples | 150 items. duration 390ms
 
         // [LIST]
-        // [ADD] 10000 times x 5 samples | 50 items. duration 10 ms. (inlined as
-        // a mvp)
+        // [ADD] 10000 times x 5 samples | 50 items. duration 10 ms. (inlined)
         // [ADD] 10000 times x 5 samples | 150 items. duration 25 ms.
-        // [ADD] 10000 times x 50 samples | 150 items. duration 70ms.
+        // [ADD] 10000 times x 50 samples | 150 items. duration 65ms.
         // [ADD] 10000 times x 150 samples | 150 items. duration 140ms.
 
         int batch = 5;

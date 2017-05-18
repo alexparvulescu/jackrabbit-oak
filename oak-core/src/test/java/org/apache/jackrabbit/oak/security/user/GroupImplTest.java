@@ -129,9 +129,21 @@ public class GroupImplTest extends AbstractSecurityTest {
     }
 
     @Test
-    public void testMembersSetGetRm() throws Exception {
-        int size = 150;
+    public void testMembersSetGetRmInline() throws Exception {
+        addMembers(50);
+    }
 
+    @Test
+    public void testMembersSetGetRmTree1() throws Exception {
+        addMembers(150);
+    }
+
+    @Test
+    public void testMembersSetGetRmTree2() throws Exception {
+        addMembers(1510);
+    }
+
+    private void addMembers(int size) throws Exception {
         String[] tests = new String[size];
         for (int i = 0; i < size; i++) {
             String id = "user" + System.currentTimeMillis() + "-" + i;
@@ -141,7 +153,7 @@ public class GroupImplTest extends AbstractSecurityTest {
         Arrays.sort(tests);
 
         Set<String> res1 = group.addMembers(tests);
-        assertTrue("unable to add ["+res1.size()+"] " + res1, res1.isEmpty());
+        assertTrue("unable to add [" + res1.size() + "] " + res1, res1.isEmpty());
 
         List<Authorizable> out = Lists.newArrayList(group.getMembers());
         assertEquals(size, out.size());
@@ -152,7 +164,7 @@ public class GroupImplTest extends AbstractSecurityTest {
             got[i++] = a.getID();
         }
         Arrays.sort(got);
-        assertArrayEquals(tests, got);
+        assertArrayEquals("membership sets not equal", tests, got);
 
         Set<String> res2 = group.removeMembers(tests);
         assertTrue("unable to remove " + res2, res2.isEmpty());

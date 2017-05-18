@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.function.Function;
 
 import javax.annotation.Nonnull;
 import javax.jcr.RepositoryException;
@@ -134,12 +133,10 @@ public class MembershipWriter {
 
         Tree t;
         int level;
-        boolean load;
 
-        TreeWriterLeaf(Tree t, boolean load, int level) {
+        TreeWriterLeaf(Tree t, int level) {
             this.t = t;
             this.level = level;
-            this.load = load;
         }
 
         @Override
@@ -149,7 +146,7 @@ public class MembershipWriter {
 
     }
 
-     static class TreeWriter implements WriterStrategy {
+    static class TreeWriter implements WriterStrategy {
 
         private int membershipSizeThreshold = DEFAULT_MEMBERSHIP_THRESHOLD;
 
@@ -163,38 +160,24 @@ public class MembershipWriter {
         @Override
         public Set<String> addMembers(@Nonnull Tree groupTree, final @Nonnull Map<String, String> memberIds)
                 throws RepositoryException {
-            Set<String> failed = new HashSet<String>();
+            Set<String> failed = new HashSet<String>(memberIds.size());
 
             List<String> keys = Lists.newArrayList(memberIds.keySet());
             if (keys.size() > 1) {
                 Collections.sort(keys);
             }
 
-            TreeWriterLeaf location = new TreeWriterLeaf(groupTree, keys.size() > 1, -1);
+            TreeWriterLeaf location = new TreeWriterLeaf(groupTree, -1);
             for (String key : keys) {
-                String mid = memberIds.remove(key);
-                if (mid == null) {
+                if (!memberIds.containsKey(key)) {
                     continue;
                 }
                 if (location.level >= 0) {
                     location = walkUp(location, key);
                 }
 
-                Function<String, Boolean> onProperty = new Function<String, Boolean>() {
-
-                    @Override
-                    public Boolean apply(String k) {
-                        String v = memberIds.remove(k);
-                        if (v != null) {
-                            failed.add(v);
-                        }
-                        return !memberIds.isEmpty();
-                    }
-                };
-
-                if (!addMember(key, location, membershipSizeThreshold, MAX_LEVEL, onProperty)) {
-                    failed.add(mid);
-                }
+                addMember(key, location, membershipSizeThreshold, MAX_LEVEL, memberIds, failed);
+                memberIds.remove(key);
                 if (memberIds.isEmpty()) {
                     break;
                 }
@@ -205,19 +188,26 @@ public class MembershipWriter {
         static TreeWriterLeaf walkUp(TreeWriterLeaf location, String key) {
             Tree t = location.t;
             int level = location.level;
+            if (level < 0) {
+                return location;
+            }
 
-            if (level >= 0 && !idToKey(key, level).equals(t.getName())) {
+            String name = idToKey(key, level);
+            if (!name.equals(t.getName())) {
+                t = t.getParent();
                 if (level == 0) {
                     t = t.getParent();
+                    if (t.hasChild(name)) {
+                        return new TreeWriterLeaf(t.getChild(name), level);
+                    }
                 }
-                TreeWriterLeaf nl = new TreeWriterLeaf(t.getParent(), true, level - 1);
-                return walkUp(nl, key);
+                return walkUp(new TreeWriterLeaf(t, level - 1), key);
             }
             return location;
         }
 
         static boolean addMember(String uuid, TreeWriterLeaf location, int threshold, int maxLevel,
-                Function<String, Boolean> onProperty) {
+                Map<String, String> memberIds, Set<String> failed) {
             Tree t = location.t;
             int level = location.level;
 
@@ -225,7 +215,7 @@ public class MembershipWriter {
             PropertyState refs = t.getProperty(UserConstants.REP_MEMBERS);
             if (refs != null) {
 
-                Set<String> newVals = getValues(refs.getValue(Type.WEAKREFERENCES), uuid, onProperty, location);
+                Set<String> newVals = getValues(refs, uuid, location, memberIds, failed);
                 if (newVals == null) {
                     return false;
                 }
@@ -240,8 +230,8 @@ public class MembershipWriter {
                     t.removeProperty(UserConstants.REP_MEMBERS);
                     if (level == -1) {
                         t = t.addChild(UserConstants.REP_MEMBERS_LIST);
-                        level++;
                     }
+                    level++;
                     // change node type from 'refs' to 'ref list'
                     t.setProperty(JcrConstants.JCR_PRIMARYTYPE, UserConstants.NT_REP_MEMBER_REFERENCES_LIST, NAME);
 
@@ -259,7 +249,6 @@ public class MembershipWriter {
 
             } else if (isLeafType(t, level)) {
                 setRepMembers(t, ImmutableSet.of(uuid));
-                location.load = false;
                 return true;
 
             } else {
@@ -273,45 +262,34 @@ public class MembershipWriter {
 
                 location.t = c;
                 location.level = level;
-                location.load = true;
 
-                return addMember(uuid, location, threshold, maxLevel, onProperty);
+                return addMember(uuid, location, threshold, maxLevel, memberIds, failed);
             }
         }
 
-        private static Set<String> getValues(Iterable<String> refs, String uuid, Function<String, Boolean> onProperty,
-                TreeWriterLeaf location) {
-            if (location.load) {
-                // eager load, process callback and lookup separately
-                Set<String> vals = Sets.newHashSet(refs);
-                location.load = false;
+        private static Set<String> getValues(PropertyState refs, String uuid, TreeWriterLeaf location,
+                Map<String, String> memberIds, Set<String> failed) {
 
-                for (String v : vals) {
-                    if (!onProperty.apply(v)) {
-                        break;
-                    }
-                }
-
-                if (vals.contains(uuid)) {
-                    return null;
-                } else {
-                    return vals;
-                }
-
-            } else {
-                // lazy load, process callback and lookup online
-                Set<String> vals = new HashSet<>();
-                boolean callback = true;
-                for (String v : refs) {
-                    if (callback) {
-                        callback = onProperty.apply(v);
-                    }
-                    if (v.equals(uuid)) {
+            boolean found = false;
+            for (String ref : refs.getValue(Type.WEAKREFERENCES)) {
+                String id = memberIds.remove(ref);
+                if (id != null) {
+                    failed.add(id);
+                    // check if I can stop the iteration early
+                    // TODO find a more efficient way to stop early when dealing
+                    // with multiple levels
+                    if (memberIds.isEmpty()) {
                         return null;
                     }
-                    vals.add(v);
+                    if (!found) {
+                        found = uuid.equals(ref);
+                    }
                 }
-                return vals;
+            }
+            if (found) {
+                return null;
+            } else {
+                return Sets.newHashSet(refs.getValue(Type.WEAKREFERENCES));
             }
         }
 
@@ -364,7 +342,7 @@ public class MembershipWriter {
         public Set<String> removeMembers(@Nonnull Tree groupTree, @Nonnull Map<String, String> memberIds) {
             Set<String> failed = new HashSet<String>(memberIds.size());
             for (Entry<String, String> e : memberIds.entrySet()) {
-                if (!removeMember(e.getKey(), groupTree, 0)) {
+                if (!removeMember(e.getKey(), groupTree, -1)) {
                     failed.add(e.getValue());
                 }
             }
@@ -378,11 +356,11 @@ public class MembershipWriter {
                 Set<String> vals = Sets.newHashSet(refs.getValue(Type.WEAKREFERENCES));
                 if (vals.remove(uuid)) {
                     if (vals.isEmpty()) {
-                        if (level > 0) {
+                        if (level < 0) {
+                            t.removeProperty(UserConstants.REP_MEMBERS);
+                        } else {
                             // TODO more aggressive pruning in case of deletes
                             t.remove();
-                        } else {
-                            t.removeProperty(UserConstants.REP_MEMBERS);
                         }
                     } else {
                         PropertyBuilder<String> propertyBuilder = PropertyBuilder.array(Type.WEAKREFERENCE,
@@ -398,15 +376,16 @@ public class MembershipWriter {
                 return false;
             } else {
                 // continue going down the tree
-                if (level == 0) {
+                if (level == -1) {
                     t = t.getChild(UserConstants.REP_MEMBERS_LIST);
                     if (!t.exists()) {
                         return false;
                     }
                 }
+                level++;
                 String key = idToKey(uuid, level);
                 if (t.hasChild(key)) {
-                    return removeMember(uuid, t.getChild(key), level + 1);
+                    return removeMember(uuid, t.getChild(key), level);
                 } else {
                     return false;
                 }
