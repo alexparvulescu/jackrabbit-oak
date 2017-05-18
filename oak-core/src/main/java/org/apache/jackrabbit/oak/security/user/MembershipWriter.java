@@ -18,6 +18,7 @@ package org.apache.jackrabbit.oak.security.user;
 
 import static org.apache.jackrabbit.oak.api.Type.NAME;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,10 +39,10 @@ import org.apache.jackrabbit.oak.plugins.memory.PropertyBuilder;
 import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
 import org.apache.jackrabbit.oak.spi.security.user.UserConstants;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
 
 /**
@@ -134,16 +135,23 @@ public class MembershipWriter {
         Tree t;
         int level;
 
+        TreeWriterLeaf(Tree groupTree) {
+            this(groupTree, -1);
+        }
+
         TreeWriterLeaf(Tree t, int level) {
             this.t = t;
             this.level = level;
+        }
+
+        boolean isInline() {
+            return level == -1;
         }
 
         @Override
         public String toString() {
             return "TreeWriterLeaf [t=" + t + ", level=" + level + "]";
         }
-
     }
 
     static class TreeWriter implements WriterStrategy {
@@ -162,21 +170,21 @@ public class MembershipWriter {
                 throws RepositoryException {
             Set<String> failed = new HashSet<String>(memberIds.size());
 
-            List<String> keys = Lists.newArrayList(memberIds.keySet());
-            if (keys.size() > 1) {
-                Collections.sort(keys);
+            List<String> ids = Lists.newArrayList(memberIds.keySet());
+            if (ids.size() > 1) {
+                Collections.sort(ids);
             }
 
-            TreeWriterLeaf location = new TreeWriterLeaf(groupTree, -1);
-            for (String key : keys) {
+            PeekingIterator<String> keys = Iterators.peekingIterator(ids.iterator());
+            TreeWriterLeaf location = new TreeWriterLeaf(groupTree);
+            while (keys.hasNext()) {
+                String key = keys.next();
                 if (!memberIds.containsKey(key)) {
                     continue;
                 }
-                if (location.level >= 0) {
-                    location = walkUp(location, key);
-                }
+                location = walkUp(location, key);
 
-                addMember(key, location, membershipSizeThreshold, MAX_LEVEL, memberIds, failed);
+                addMember(key, location, membershipSizeThreshold, MAX_LEVEL, memberIds, failed, keys);
                 memberIds.remove(key);
                 if (memberIds.isEmpty()) {
                     break;
@@ -186,28 +194,28 @@ public class MembershipWriter {
         }
 
         static TreeWriterLeaf walkUp(TreeWriterLeaf location, String key) {
-            Tree t = location.t;
-            int level = location.level;
-            if (level < 0) {
+            if (location.isInline()) {
                 return location;
             }
+            int level = location.level;
+            Tree t = location.t;
 
             String name = idToKey(key, level);
             if (!name.equals(t.getName())) {
                 t = t.getParent();
                 if (level == 0) {
-                    t = t.getParent();
                     if (t.hasChild(name)) {
                         return new TreeWriterLeaf(t.getChild(name), level);
                     }
+                    t = t.getParent();
                 }
                 return walkUp(new TreeWriterLeaf(t, level - 1), key);
             }
             return location;
         }
 
-        static boolean addMember(String uuid, TreeWriterLeaf location, int threshold, int maxLevel,
-                Map<String, String> memberIds, Set<String> failed) {
+        static void addMember(String uuid, TreeWriterLeaf location, int threshold, int maxLevel,
+                Map<String, String> memberIds, Set<String> failed, PeekingIterator<String> keys) {
             Tree t = location.t;
             int level = location.level;
 
@@ -215,15 +223,14 @@ public class MembershipWriter {
             PropertyState refs = t.getProperty(UserConstants.REP_MEMBERS);
             if (refs != null) {
 
-                Set<String> newVals = getValues(refs, uuid, location, memberIds, failed);
+                List<String> newVals = getValues(refs, uuid, location, memberIds, failed, keys);
                 if (newVals == null) {
-                    return false;
+                    return;
                 }
                 newVals.add(uuid);
 
                 if (newVals.size() <= threshold || level >= maxLevel) {
                     setRepMembers(t, newVals);
-                    return true;
 
                 } else {
                     // merge & split
@@ -235,8 +242,8 @@ public class MembershipWriter {
                     // change node type from 'refs' to 'ref list'
                     t.setProperty(JcrConstants.JCR_PRIMARYTYPE, UserConstants.NT_REP_MEMBER_REFERENCES_LIST, NAME);
 
-                    Map<String, Set<String>> groupped = groupByKey(newVals, level);
-                    for (Entry<String, Set<String>> e : groupped.entrySet()) {
+                    Map<String, List<String>> groupped = groupByKey(newVals, level);
+                    for (Entry<String, List<String>> e : groupped.entrySet()) {
                         Tree c = t.addChild(e.getKey());
                         c.setProperty(JcrConstants.JCR_PRIMARYTYPE, UserConstants.NT_REP_MEMBER_REFERENCES, NAME);
                         // this can overflow the threshold
@@ -244,12 +251,10 @@ public class MembershipWriter {
                     }
                     location.t = t.getChild(idToKey(uuid, level));
                     location.level = level;
-                    return true;
                 }
 
             } else if (isLeafType(t, level)) {
-                setRepMembers(t, ImmutableSet.of(uuid));
-                return true;
+                setRepMembers(t, Lists.newArrayList(uuid));
 
             } else {
                 // continue going down the tree
@@ -263,34 +268,55 @@ public class MembershipWriter {
                 location.t = c;
                 location.level = level;
 
-                return addMember(uuid, location, threshold, maxLevel, memberIds, failed);
+                addMember(uuid, location, threshold, maxLevel, memberIds, failed, keys);
             }
         }
 
-        private static Set<String> getValues(PropertyState refs, String uuid, TreeWriterLeaf location,
-                Map<String, String> memberIds, Set<String> failed) {
+        private static List<String> getValues(PropertyState refs, String uuid, TreeWriterLeaf location,
+                Map<String, String> memberIds, Set<String> failed, PeekingIterator<String> keys) {
 
             boolean found = false;
             for (String ref : refs.getValue(Type.WEAKREFERENCES)) {
                 String id = memberIds.remove(ref);
                 if (id != null) {
                     failed.add(id);
-                    // check if I can stop the iteration early
-                    // TODO find a more efficient way to stop early when dealing
-                    // with multiple levels
-                    if (memberIds.isEmpty()) {
-                        return null;
-                    }
                     if (!found) {
                         found = uuid.equals(ref);
+                    }
+                    // check if I can stop the iteration early
+                    if (found && stopEarly(location, memberIds, keys)) {
+                        return null;
                     }
                 }
             }
             if (found) {
                 return null;
             } else {
-                return Sets.newHashSet(refs.getValue(Type.WEAKREFERENCES));
+                return Lists.newArrayList(refs.getValue(Type.WEAKREFERENCES));
             }
+        }
+
+        private static boolean stopEarly(TreeWriterLeaf location, Map<String, String> memberIds,
+                PeekingIterator<String> keys) {
+            if (location.isInline()) {
+                return memberIds.isEmpty();
+            }
+
+            // check if the next valid id (not already removed) belongs
+            // to the current level
+            String nextId = safePeek(memberIds, keys);
+            return nextId != null && !idToKey(nextId, location.level).equals(location.t.getName());
+        }
+
+        private static String safePeek(Map<String, String> memberIds, PeekingIterator<String> keys) {
+            while (keys.hasNext()) {
+                String id = keys.peek();
+                if (memberIds.containsKey(id)) {
+                    return id;
+                }
+                keys.next();
+            }
+            return null;
         }
 
         private static Tree getOrAdd(Tree t, String name, String type) {
@@ -324,13 +350,13 @@ public class MembershipWriter {
             }
         }
 
-        private static Map<String, Set<String>> groupByKey(Set<String> uuids, int level) {
-            Map<String, Set<String>> ret = new HashMap<>();
+        private static Map<String, List<String>> groupByKey(List<String> uuids, int level) {
+            Map<String, List<String>> ret = new HashMap<>();
             for (String uuid : uuids) {
                 String key = idToKey(uuid, level);
-                Set<String> vals = ret.get(key);
+                List<String> vals = ret.get(key);
                 if (vals == null) {
-                    vals = new HashSet<>();
+                    vals = new ArrayList<>();
                 }
                 vals.add(uuid);
                 ret.put(key, vals);

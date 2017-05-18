@@ -25,7 +25,6 @@ import java.util.Set;
 
 import org.apache.jackrabbit.api.security.user.Group;
 import org.apache.jackrabbit.oak.api.Tree;
-import org.apache.jackrabbit.oak.security.user.MembershipWriter.TreeWriter;
 import org.junit.Test;
 
 import com.google.common.collect.Maps;
@@ -39,31 +38,31 @@ public class MembershipWriterTestIT extends MembershipBaseTest {
         Group grp = createGroup();
 
         // [TREE]
-        // [ADD] #0 1000 times x 5 items. duration 51 ms.
-        // [ADD] #1 1000 times x 5 items. duration 27 ms.
-        // [ADD] #2 1000 times x 5 items. duration 36 ms.
-        // [ADD] #3 1000 times x 5 items. duration 40 ms.
-        // [ADD] #4 1000 times x 5 items. duration 51 ms.
-        // [ADD] #5 1000 times x 5 items. duration 29 ms.
-        // [ADD] #6 1000 times x 5 items. duration 26 ms.
-        // [ADD] #7 1000 times x 5 items. duration 27 ms.
-        // [ADD] #8 1000 times x 5 items. duration 38 ms.
-        // [ADD] #9 1000 times x 5 items. duration 21 ms.
-        // [ADD] #10 1000 times x 5 items. duration 17 ms.
-        // [ADD] #11 1000 times x 5 items. duration 12 ms.
-        // [ADD] #12 1000 times x 5 items. duration 18 ms.
-        // [ADD] #13 1000 times x 5 items. duration 17 ms.
-        // [ADD] #14 1000 times x 5 items. duration 25 ms.
-        // [ADD] #15 1000 times x 5 items. duration 16 ms.
-        // [ADD] #16 1000 times x 5 items. duration 15 ms.
-        // [ADD] #17 1000 times x 5 items. duration 13 ms.
-        // [ADD] #18 1000 times x 5 items. duration 17 ms.
-        // [ADD] #19 1000 times x 5 items. duration 19 ms.
-        // [ADD] #20 1000 times x 5 items. duration 29 ms.
-        // [ADD] #21 1000 times x 5 items. duration 36 ms.
-        // [ADD] #22 1000 times x 5 items. duration 35 ms.
-        // [ADD] #23 1000 times x 5 items. duration 40 ms.
-        // [ADD] #24 1000 times x 5 items. duration 43 ms.
+        // [ADD] #0 1000 times x 5 items. duration 53 ms.
+        // [ADD] #1 1000 times x 5 items. duration 26 ms.
+        // [ADD] #2 1000 times x 5 items. duration 39 ms.
+        // [ADD] #3 1000 times x 5 items. duration 45 ms.
+        // [ADD] #4 1000 times x 5 items. duration 47 ms.
+        // [ADD] #5 1000 times x 5 items. duration 53 ms.
+        // [ADD] #6 1000 times x 5 items. duration 24 ms.
+        // [ADD] #7 1000 times x 5 items. duration 19 ms.
+        // [ADD] #8 1000 times x 5 items. duration 27 ms.
+        // [ADD] #9 1000 times x 5 items. duration 32 ms.
+        // [ADD] #10 1000 times x 5 items. duration 25 ms.
+        // [ADD] #11 1000 times x 5 items. duration 20 ms.
+        // [ADD] #12 1000 times x 5 items. duration 15 ms.
+        // [ADD] #13 1000 times x 5 items. duration 20 ms.
+        // [ADD] #14 1000 times x 5 items. duration 19 ms.
+        // [ADD] #15 1000 times x 5 items. duration 24 ms.
+        // [ADD] #16 1000 times x 5 items. duration 17 ms.
+        // [ADD] #17 1000 times x 5 items. duration 15 ms.
+        // [ADD] #18 1000 times x 5 items. duration 21 ms.
+        // [ADD] #19 1000 times x 5 items. duration 22 ms.
+        // [ADD] #20 1000 times x 5 items. duration 17 ms.
+        // [ADD] #21 1000 times x 5 items. duration 23 ms.
+        // [ADD] #22 1000 times x 5 items. duration 36 ms.
+        // [ADD] #23 1000 times x 5 items. duration 30 ms.
+        // [ADD] #24 1000 times x 5 items. duration 32 ms.
 
         // [LIST]
         // [ADD] #0 1000 times x 5 items. duration 120 ms.
@@ -94,7 +93,7 @@ public class MembershipWriterTestIT extends MembershipBaseTest {
 
         int times = 1000;
         int size = 5;
-        boolean useTreeWriter = false;
+        boolean useTreeWriter = true;
 
         MembershipWriter writer = new MembershipWriter(useTreeWriter);
         Tree t = getTree(grp);
@@ -120,23 +119,23 @@ public class MembershipWriterTestIT extends MembershipBaseTest {
 
     @Test
     public void testBenchAddMembersExisting() throws Exception {
-        assumeTrue(Boolean.getBoolean("MembershipWriterTestIT.testBenchAddMembersExisting"));
+        // assumeTrue(Boolean.getBoolean("MembershipWriterTestIT.testBenchAddMembersExisting"));
 
         Group grp = createGroup();
 
         // [TREE]
-        // [ADD] 10000 times x 5 samples | 50 items. duration 10ms. (inlined)
-        // [ADD] 10000 times x 5 samples | 150 items. duration 42ms
-        // [ADD] 10000 times x 50 samples | 150 items. duration 210ms
+        // [ADD] 10000 times x 5 samples | 50 items. duration 11ms. (inlined)
+        // [ADD] 10000 times x 5 samples | 150 items. duration 28ms
+        // [ADD] 10000 times x 50 samples | 150 items. duration 192ms
         // [ADD] 10000 times x 150 samples | 150 items. duration 390ms
 
         // [LIST]
         // [ADD] 10000 times x 5 samples | 50 items. duration 10 ms. (inlined)
-        // [ADD] 10000 times x 5 samples | 150 items. duration 25 ms.
+        // [ADD] 10000 times x 5 samples | 150 items. duration 23 ms.
         // [ADD] 10000 times x 50 samples | 150 items. duration 65ms.
         // [ADD] 10000 times x 150 samples | 150 items. duration 140ms.
 
-        int batch = 5;
+        int batch = 50;
         int size = 150;
         boolean useTreeWriter = true;
         int times = 10000;
@@ -156,7 +155,8 @@ public class MembershipWriterTestIT extends MembershipBaseTest {
         root.commit();
         Tree t = getTree(grp);
 
-        while (true) {
+        long tg = 0;
+        for (int cg = 1; cg <= 1000; cg++) {
             long total = 0;
             Random r = new Random();
             for (int c = 0; c < times; c++) {
@@ -173,11 +173,13 @@ public class MembershipWriterTestIT extends MembershipBaseTest {
 
                 long dur = System.currentTimeMillis() - start;
                 total += dur;
-                assertTrue("should not add any (" + res.size() + " vs " + samples + ")! ", res.size() == samples);
+                assertTrue("should not add any (" + res.size() + " vs " + samples + ")! " + res, res.size() == samples);
             }
 
+            tg += total;
+            long avg = tg / cg;
             System.err.println("[AddExisting] " + times + " times x " + batch + " samples | " + size
-                    + " items. duration " + total + " ms.");
+                    + " items. duration " + total + " ms. -- #" + cg + ": avg " + avg + " ms.");
         }
     }
 
