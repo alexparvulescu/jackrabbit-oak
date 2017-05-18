@@ -33,6 +33,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.jackrabbit.JcrConstants;
 import org.apache.jackrabbit.oak.api.PropertyState;
 import org.apache.jackrabbit.oak.api.Tree;
@@ -44,6 +45,7 @@ import org.apache.jackrabbit.oak.plugins.nodetype.NodeTypeConstants;
 import org.apache.jackrabbit.oak.plugins.tree.impl.ImmutableTree;
 import org.apache.jackrabbit.util.ISO8601;
 
+import static com.google.common.base.Strings.repeat;
 import static com.google.common.collect.Iterables.contains;
 import static com.google.common.collect.Lists.newArrayList;
 import static java.util.Collections.emptyList;
@@ -501,4 +503,48 @@ public final class TreeUtil {
     public static boolean isReadOnlyTree(@Nonnull Tree tree) {
         return tree instanceof ImmutableTree;
     }
+
+    /**
+     * Provides a string representation of the given node state
+     * 
+     * @param t
+     *            tree state
+     * @return a string representation of {@code t}.
+     */
+    public static String toString(Tree t) {
+        if (t == null) {
+            return "[null]";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append(toString(t, 1, "  ", "/"));
+        return sb.toString();
+    }
+
+    private static String toString(Tree t, int level, String prepend, String name) {
+        StringBuilder node = new StringBuilder();
+        node.append(repeat(prepend, level)).append(name);
+
+        StringBuilder props = new StringBuilder();
+        boolean first = true;
+        for (PropertyState ps : t.getProperties()) {
+            if (!first) {
+                props.append(", ");
+            } else {
+                first = false;
+            }
+            props.append(ps);
+        }
+
+        if (props.length() > 0) {
+            node.append("{");
+            node.append(props);
+            node.append("}");
+        }
+        for (Tree c : t.getChildren()) {
+            node.append(IOUtils.LINE_SEPARATOR);
+            node.append(toString(c, level + 1, prepend, c.getName()));
+        }
+        return node.toString();
+    }
+
 }
