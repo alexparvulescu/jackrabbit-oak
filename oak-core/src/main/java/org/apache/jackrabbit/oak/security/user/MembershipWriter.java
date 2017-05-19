@@ -17,10 +17,9 @@
 package org.apache.jackrabbit.oak.security.user;
 
 import static org.apache.jackrabbit.oak.api.Type.NAME;
+import static com.google.common.collect.Lists.newLinkedList;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -40,9 +39,7 @@ import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
 import org.apache.jackrabbit.oak.spi.security.user.UserConstants;
 
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
 
 /**
@@ -130,42 +127,6 @@ public class MembershipWriter {
 
     }
 
-    private static class TreeWriterLeaf {
-
-        Tree tree;
-        String name;
-        int level;
-
-        TreeWriterLeaf(Tree groupTree) {
-            this.tree = groupTree;
-            this.name = "";
-            this.level = -1;
-        }
-
-        void update(Tree t, String name, int level) {
-            this.tree = t;
-            this.name = name;
-            this.level = level;
-        }
-
-        Tree getTree() {
-            return tree;
-        }
-
-        String getName() {
-            return name;
-        }
-
-        boolean isInline() {
-            return level == -1;
-        }
-
-        @Override
-        public String toString() {
-            return "TreeWriterLeaf [t=" + tree + ", level=" + level + "]";
-        }
-    }
-
     static class TreeWriter implements WriterStrategy {
 
         private int membershipSizeThreshold = DEFAULT_MEMBERSHIP_THRESHOLD;
@@ -181,68 +142,22 @@ public class MembershipWriter {
         public Set<String> addMembers(@Nonnull Tree groupTree, final @Nonnull Map<String, String> memberIds)
                 throws RepositoryException {
             Set<String> failed = new HashSet<String>(memberIds.size());
-
-            List<String> ids = Lists.newArrayList(memberIds.keySet());
-            if (ids.size() > 1) {
-                Collections.sort(ids);
-            }
-
-            PeekingIterator<String> keys = Iterators.peekingIterator(ids.iterator());
-            TreeWriterLeaf location = new TreeWriterLeaf(groupTree);
-            while (keys.hasNext()) {
-                String key = keys.next();
-                if (!memberIds.containsKey(key)) {
-                    continue;
-                }
-                walkUp(location, key);
-
-                addMember(key, location, membershipSizeThreshold, MAX_LEVEL, memberIds, failed, keys);
-                memberIds.remove(key);
-                if (memberIds.isEmpty()) {
-                    break;
-                }
-            }
+            addMembers(groupTree, -1, membershipSizeThreshold, MAX_LEVEL, memberIds, failed, memberIds.keySet(), false);
             return failed;
         }
 
-        static void walkUp(TreeWriterLeaf location, String key) {
-            if (location.isInline()) {
-                return;
-            }
-            // TODO this needs a full hierarchy check
-            int level = location.level;
-            Tree t = location.getTree();
-            String locName = location.getName();
-
-            String name = idToKey(key, level);
-            if (!name.equals(locName)) {
-                t = t.getParent();
-                if (level == 0) {
-                    if (t.hasChild(name)) {
-                        location.update(t.getChild(name), name, level);
-                        return;
-                    }
-                    t = t.getParent();
-                }
-                location.update(t, t.getName(), level - 1);
-                walkUp(location, key);
-            }
-        }
-
-        static void addMember(String uuid, TreeWriterLeaf location, int threshold, int maxLevel,
-                Map<String, String> memberIds, Set<String> failed, PeekingIterator<String> keys) {
-            Tree t = location.getTree();
-            int level = location.level;
+        static void addMembers(@Nonnull Tree t, int level, int threshold, int maxLevel,
+                @Nonnull Map<String, String> memberIds, @Nonnull Set<String> failed, @Nonnull Collection<String> values,
+                boolean force) {
 
             // if property exists, we're sure this is a leaf
             PropertyState refs = t.getProperty(UserConstants.REP_MEMBERS);
-            if (refs != null) {
-
-                List<String> newVals = getValues(refs, uuid, location, memberIds, failed, keys);
+            if (force || refs != null) {
+                List<String> newVals = filterAndGet(refs, values, memberIds, failed);
                 if (newVals == null) {
                     return;
                 }
-                newVals.add(uuid);
+                newVals.addAll(values);
 
                 if (newVals.size() <= threshold || level >= maxLevel) {
                     setRepMembers(t, newVals);
@@ -253,88 +168,53 @@ public class MembershipWriter {
                     if (level == -1) {
                         t = t.addChild(UserConstants.REP_MEMBERS_LIST);
                     }
-                    level++;
                     // change node type from 'refs' to 'ref list'
                     t.setProperty(JcrConstants.JCR_PRIMARYTYPE, UserConstants.NT_REP_MEMBER_REFERENCES_LIST, NAME);
-
-                    Map<String, List<String>> groupped = groupByKey(newVals, level);
-                    for (Entry<String, List<String>> e : groupped.entrySet()) {
-                        Tree c = t.addChild(e.getKey());
-                        c.setProperty(JcrConstants.JCR_PRIMARYTYPE, UserConstants.NT_REP_MEMBER_REFERENCES, NAME);
-                        // this can overflow the threshold
-                        setRepMembers(c, e.getValue());
-                    }
-                    String key = idToKey(uuid, level);
-                    Tree c = t.getChild(key);
-                    location.update(c, key, level);
+                    addMembersAsTree(t, level, threshold, maxLevel, memberIds, failed, newVals, true);
                 }
-
             } else if (isLeafType(t, level)) {
-                setRepMembers(t, Lists.newArrayList(uuid));
-
+                addMembers(t, level, threshold, maxLevel, memberIds, failed, values, true);
             } else {
                 // continue going down the tree
                 if (level == -1) {
-                    t = getOrAdd(t, UserConstants.REP_MEMBERS_LIST, UserConstants.NT_REP_MEMBER_REFERENCES_LIST);
+                    t = getOrAdd(t, UserConstants.REP_MEMBERS_LIST, UserConstants.NT_REP_MEMBER_REFERENCES_LIST, false);
                 }
-                level++;
-                String key = idToKey(uuid, level);
-                Tree c = getOrAdd(t, key, UserConstants.NT_REP_MEMBER_REFERENCES);
-                location.update(c, key, level);
-                addMember(uuid, location, threshold, maxLevel, memberIds, failed, keys);
+                addMembersAsTree(t, level, threshold, maxLevel, memberIds, failed, values, false);
             }
         }
 
-        private static List<String> getValues(PropertyState refs, String uuid, TreeWriterLeaf location,
-                Map<String, String> memberIds, Set<String> failed, PeekingIterator<String> keys) {
+        private static void addMembersAsTree(Tree t, int level, int threshold, int maxLevel,
+                Map<String, String> memberIds, Set<String> failed, Collection<String> values, boolean forceAdd) {
+            level++;
+            Map<String, Collection<String>> groupped = groupByKey(values, level);
+            for (Entry<String, Collection<String>> e : groupped.entrySet()) {
+                String key = e.getKey();
+                Tree c = getOrAdd(t, key, UserConstants.NT_REP_MEMBER_REFERENCES, forceAdd);
+                addMembers(c, level, threshold, maxLevel, memberIds, failed, e.getValue(), true);
+            }
+        }
 
-            boolean found = false;
+        private static List<String> filterAndGet(PropertyState refs, Collection<String> values,
+                Map<String, String> memberIds, Set<String> failed) {
+            if (refs == null) {
+                return newLinkedList();
+            }
             for (String ref : refs.getValue(Type.WEAKREFERENCES)) {
-                String id = memberIds.remove(ref);
-                if (id != null) {
-                    failed.add(id);
-                    if (!found) {
-                        found = uuid.equals(ref);
-                    }
+                if (values.contains(ref)) {
+                    failed.add(memberIds.get(ref));
+                    values.remove(ref);
                     // check if I can stop the iteration early
-                    if (found && stopEarly(location, memberIds, keys)) {
+                    if (values.isEmpty()) {
                         return null;
                     }
                 }
             }
-            if (found) {
-                return null;
-            } else {
-                return Lists.newArrayList(refs.getValue(Type.WEAKREFERENCES));
-            }
+            return newLinkedList(refs.getValue(Type.WEAKREFERENCES));
         }
 
-        private static boolean stopEarly(TreeWriterLeaf location, Map<String, String> memberIds,
-                PeekingIterator<String> keys) {
-            if (location.isInline()) {
-                return memberIds.isEmpty();
-            }
-
-            // check if the next valid id (not already removed) belongs
-            // to the current level
-            String nextId = safePeek(memberIds, keys);
-            return nextId != null && !idToKey(nextId, location.level).equals(location.getName());
-        }
-
-        private static String safePeek(Map<String, String> memberIds, PeekingIterator<String> keys) {
-            while (keys.hasNext()) {
-                String id = keys.peek();
-                if (memberIds.containsKey(id)) {
-                    return id;
-                }
-                keys.next();
-            }
-            return null;
-        }
-
-        private static Tree getOrAdd(Tree t, String name, String type) {
+        private static Tree getOrAdd(Tree t, String name, String type, boolean force) {
             Tree c;
-            if (t.hasChild(name)) {
+            if (!force && t.hasChild(name)) {
                 c = t.getChild(name);
             } else {
                 c = t.addChild(name);
@@ -363,13 +243,13 @@ public class MembershipWriter {
             }
         }
 
-        private static Map<String, List<String>> groupByKey(List<String> uuids, int level) {
-            Map<String, List<String>> ret = new HashMap<>();
+        private static Map<String, Collection<String>> groupByKey(Collection<String> uuids, int level) {
+            Map<String, Collection<String>> ret = Maps.newHashMapWithExpectedSize(16);
             for (String uuid : uuids) {
                 String key = idToKey(uuid, level);
-                List<String> vals = ret.get(key);
+                Collection<String> vals = ret.get(key);
                 if (vals == null) {
-                    vals = new ArrayList<>();
+                    vals =  newLinkedList();
                 }
                 vals.add(uuid);
                 ret.put(key, vals);
@@ -379,54 +259,65 @@ public class MembershipWriter {
 
         @Override
         public Set<String> removeMembers(@Nonnull Tree groupTree, @Nonnull Map<String, String> memberIds) {
-            Set<String> failed = new HashSet<String>(memberIds.size());
-            for (Entry<String, String> e : memberIds.entrySet()) {
-                if (!removeMember(e.getKey(), groupTree, -1)) {
-                    failed.add(e.getValue());
-                }
-            }
+            Set<String> failed = Sets.newHashSet();
+            Set<String> rms = Sets.newHashSet(memberIds.keySet());
+            removeMembers(groupTree, -1, memberIds, failed, rms);
             return failed;
         }
 
-        private static boolean removeMember(String uuid, Tree t, int level) {
+        private static void removeMembers(Tree t, int level, Map<String, String> memberIds, Set<String> failed, Collection<String> rms) {
             // if property exists, we're sure this is a leaf
             PropertyState refs = t.getProperty(UserConstants.REP_MEMBERS);
             if (refs != null) {
                 Set<String> vals = Sets.newHashSet(refs.getValue(Type.WEAKREFERENCES));
-                if (vals.remove(uuid)) {
+                boolean dirty = false;
+                Iterator<String> it = vals.iterator();
+                while (it.hasNext()) {
+                    String v = it.next();
+                    if (rms.remove(v)) {
+                        it.remove();
+                        dirty = true;
+                        if (rms.isEmpty()) {
+                            break;
+                        }
+                    }
+                }
+                for (String k : rms) {
+                    failed.add(memberIds.get(k));
+                }
+                if (dirty) {
                     if (vals.isEmpty()) {
                         if (level < 0) {
+                            // TODO remove OR set to empty?
                             t.removeProperty(UserConstants.REP_MEMBERS);
                         } else {
                             // TODO more aggressive pruning in case of deletes
                             t.remove();
                         }
                     } else {
-                        PropertyBuilder<String> propertyBuilder = PropertyBuilder.array(Type.WEAKREFERENCE,
-                                UserConstants.REP_MEMBERS);
-                        propertyBuilder.addValues(vals);
-                        t.setProperty(propertyBuilder.getPropertyState());
+                        setRepMembers(t, vals);
                     }
-                    return true;
-                } else {
-                    return false;
                 }
             } else if (isLeafType(t, level)) {
-                return false;
+                for (String k : rms) {
+                    failed.add(memberIds.get(k));
+                }
+
             } else {
                 // continue going down the tree
                 if (level == -1) {
                     t = t.getChild(UserConstants.REP_MEMBERS_LIST);
                     if (!t.exists()) {
-                        return false;
+                        return;
                     }
                 }
                 level++;
-                String key = idToKey(uuid, level);
-                if (t.hasChild(key)) {
-                    return removeMember(uuid, t.getChild(key), level);
-                } else {
-                    return false;
+                Map<String, Collection<String>> groupped = groupByKey(rms, level);
+                for (Entry<String, Collection<String>> e : groupped.entrySet()) {
+                    String key = e.getKey();
+                    if (t.hasChild(key)) {
+                        removeMembers(t.getChild(key), level, memberIds, failed, e.getValue());
+                    }
                 }
             }
         }
