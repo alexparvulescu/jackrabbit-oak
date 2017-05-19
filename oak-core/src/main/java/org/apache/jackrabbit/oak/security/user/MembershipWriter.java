@@ -132,16 +132,28 @@ public class MembershipWriter {
 
     private static class TreeWriterLeaf {
 
-        Tree t;
+        Tree tree;
+        String name;
         int level;
 
         TreeWriterLeaf(Tree groupTree) {
-            this(groupTree, -1);
+            this.tree = groupTree;
+            this.name = "";
+            this.level = -1;
         }
 
-        TreeWriterLeaf(Tree t, int level) {
-            this.t = t;
+        void update(Tree t, String name, int level) {
+            this.tree = t;
+            this.name = name;
             this.level = level;
+        }
+
+        Tree getTree() {
+            return tree;
+        }
+
+        String getName() {
+            return name;
         }
 
         boolean isInline() {
@@ -150,7 +162,7 @@ public class MembershipWriter {
 
         @Override
         public String toString() {
-            return "TreeWriterLeaf [t=" + t + ", level=" + level + "]";
+            return "TreeWriterLeaf [t=" + tree + ", level=" + level + "]";
         }
     }
 
@@ -182,7 +194,7 @@ public class MembershipWriter {
                 if (!memberIds.containsKey(key)) {
                     continue;
                 }
-                location = walkUp(location, key);
+                walkUp(location, key);
 
                 addMember(key, location, membershipSizeThreshold, MAX_LEVEL, memberIds, failed, keys);
                 memberIds.remove(key);
@@ -193,30 +205,33 @@ public class MembershipWriter {
             return failed;
         }
 
-        static TreeWriterLeaf walkUp(TreeWriterLeaf location, String key) {
+        static void walkUp(TreeWriterLeaf location, String key) {
             if (location.isInline()) {
-                return location;
+                return;
             }
+            // TODO this needs a full hierarchy check
             int level = location.level;
-            Tree t = location.t;
+            Tree t = location.getTree();
+            String locName = location.getName();
 
             String name = idToKey(key, level);
-            if (!name.equals(t.getName())) {
+            if (!name.equals(locName)) {
                 t = t.getParent();
                 if (level == 0) {
                     if (t.hasChild(name)) {
-                        return new TreeWriterLeaf(t.getChild(name), level);
+                        location.update(t.getChild(name), name, level);
+                        return;
                     }
                     t = t.getParent();
                 }
-                return walkUp(new TreeWriterLeaf(t, level - 1), key);
+                location.update(t, t.getName(), level - 1);
+                walkUp(location, key);
             }
-            return location;
         }
 
         static void addMember(String uuid, TreeWriterLeaf location, int threshold, int maxLevel,
                 Map<String, String> memberIds, Set<String> failed, PeekingIterator<String> keys) {
-            Tree t = location.t;
+            Tree t = location.getTree();
             int level = location.level;
 
             // if property exists, we're sure this is a leaf
@@ -249,8 +264,9 @@ public class MembershipWriter {
                         // this can overflow the threshold
                         setRepMembers(c, e.getValue());
                     }
-                    location.t = t.getChild(idToKey(uuid, level));
-                    location.level = level;
+                    String key = idToKey(uuid, level);
+                    Tree c = t.getChild(key);
+                    location.update(c, key, level);
                 }
 
             } else if (isLeafType(t, level)) {
@@ -264,10 +280,7 @@ public class MembershipWriter {
                 level++;
                 String key = idToKey(uuid, level);
                 Tree c = getOrAdd(t, key, UserConstants.NT_REP_MEMBER_REFERENCES);
-
-                location.t = c;
-                location.level = level;
-
+                location.update(c, key, level);
                 addMember(uuid, location, threshold, maxLevel, memberIds, failed, keys);
             }
         }
@@ -305,7 +318,7 @@ public class MembershipWriter {
             // check if the next valid id (not already removed) belongs
             // to the current level
             String nextId = safePeek(memberIds, keys);
-            return nextId != null && !idToKey(nextId, location.level).equals(location.t.getName());
+            return nextId != null && !idToKey(nextId, location.level).equals(location.getName());
         }
 
         private static String safePeek(Map<String, String> memberIds, PeekingIterator<String> keys) {

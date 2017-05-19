@@ -126,16 +126,18 @@ public class MembershipWriterTestIT extends MembershipBaseTest {
         // [TREE]
         // [ADD] 10000 times x 5 samples | 50 items. duration 11ms. (inlined)
         // [ADD] 10000 times x 5 samples | 150 items. duration 28ms
+        // [ADD] 10000 times x 10 samples | 150 items. duration 49ms
         // [ADD] 10000 times x 50 samples | 150 items. duration 192ms
         // [ADD] 10000 times x 150 samples | 150 items. duration 390ms
 
         // [LIST]
         // [ADD] 10000 times x 5 samples | 50 items. duration 10 ms. (inlined)
         // [ADD] 10000 times x 5 samples | 150 items. duration 23 ms.
+        // [ADD] 10000 times x 10 samples | 150 items. duration 30 ms.
         // [ADD] 10000 times x 50 samples | 150 items. duration 65ms.
         // [ADD] 10000 times x 150 samples | 150 items. duration 140ms.
 
-        int batch = 50;
+        int batch = 10;
         int size = 150;
         boolean useTreeWriter = true;
         int times = 10000;
