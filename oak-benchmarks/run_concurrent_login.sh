@@ -25,7 +25,7 @@ NO_GROUPS="1 10 100 1000"
 USE_NESTED_GROUPS=true # false
 RUNTIME=5
 FIXS="Oak-Segment-Tar" # Jackrabbit"
-THREADS="1,10,20,50" #"1,2,4,8,10,15,20,50"
+THREADS="1" #"1,2,4,8,10,15,20,50"
 PROFILE=false
 NUM_ITEMS=1000
 
@@ -59,6 +59,11 @@ for bm in $BENCH
             cmd="java -Xmx2048m -Dprofile=$PROFILE -Druntime=$RUNTIME -Dwarmup=10 -jar target/oak-benchmarks-*-SNAPSHOT.jar benchmark --noIterations $HASH_ITERATIONS --runWithToken $USE_TOKEN --expiration $EXPIRATION --numberOfGroups $noGroups --nestedGroups $USE_NESTED_GROUPS --csvFile $LOG --concurrency $THREADS --runAsUser $USER --report false $bm $fix"
             echo $cmd
             $cmd
+
+            rm -rf target/Jackrabbit-* target/Oak-Tar-*
+            cmd2="java -Xmx2048m -DGroupImpl.useNew=true -Dprofile=$PROFILE -Druntime=$RUNTIME -Dwarmup=10 -jar target/oak-benchmarks-*-SNAPSHOT.jar benchmark --noIterations $HASH_ITERATIONS --runWithToken $USE_TOKEN --expiration $EXPIRATION --numberOfGroups $noGroups --nestedGroups $USE_NESTED_GROUPS --csvFile $LOG --concurrency $THREADS --runAsUser $USER --report false $bm $fix"
+            echo $cmd2
+            $cmd2
         done
     done
 done
