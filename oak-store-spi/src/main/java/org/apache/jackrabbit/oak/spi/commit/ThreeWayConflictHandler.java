@@ -39,8 +39,31 @@ import org.apache.jackrabbit.oak.spi.state.NodeState;
  *
  * @see ConflictHandler
  */
-@Deprecated
-public interface ConflictHandler extends PartialConflictHandler {
+public interface ThreeWayConflictHandler {
+    /**
+     * Resolutions for conflicts
+     */
+    enum Resolution {
+        /**
+         * Use the changes from the current {@link org.apache.jackrabbit.oak.api.Root} instance
+         */
+        OURS,
+
+        /**
+         * Use the changes from the underlying persistence store
+         */
+        THEIRS,
+
+        /**
+         * Indicated changes have been merged by this {@code ConflictHandler} instance.
+         */
+        MERGED,
+
+        /**
+         * Changes are ignored by this handler (replaces null value).
+         */
+        IGNORED
+    }
 
     /**
      * The property {@code ours} has been added to {@code parent} which conflicts
@@ -49,11 +72,11 @@ public interface ConflictHandler extends PartialConflictHandler {
      * @param parent  root of the conflict
      * @param ours  our version of the property
      * @param theirs  their version of the property
+     * @param base  the base version of the property
      * @return  {@link Resolution} of the conflict
      */
-    @Override
     @Nonnull
-    Resolution addExistingProperty(NodeBuilder parent, PropertyState ours, PropertyState theirs);
+    Resolution addExistingProperty(NodeBuilder parent, PropertyState ours, PropertyState theirs, PropertyState base);
 
     /**
      * The property {@code ours} has been changed in {@code parent} while it was
@@ -61,11 +84,11 @@ public interface ConflictHandler extends PartialConflictHandler {
      *
      * @param parent  root of the conflict
      * @param ours  our version of the property
+     * @param base  the base version of the property
      * @return  {@link Resolution} of the conflict
      */
-    @Override
     @Nonnull
-    Resolution changeDeletedProperty(NodeBuilder parent, PropertyState ours);
+    Resolution changeDeletedProperty(NodeBuilder parent, PropertyState ours, PropertyState base);
 
     /**
      * The property {@code ours} has been changed in {@code parent} while it was
@@ -74,11 +97,11 @@ public interface ConflictHandler extends PartialConflictHandler {
      * @param parent  root of the conflict
      * @param ours  our version of the property
      * @param theirs  their version of the property
+     * @param base  the base version of the property
      * @return  {@link Resolution} of the conflict
      */
-    @Override
     @Nonnull
-    Resolution changeChangedProperty(NodeBuilder parent, PropertyState ours, PropertyState theirs);
+    Resolution changeChangedProperty(NodeBuilder parent, PropertyState ours, PropertyState theirs, PropertyState base);
 
     /**
      * The property {@code ours} has been removed in {@code parent} while it was
@@ -88,9 +111,8 @@ public interface ConflictHandler extends PartialConflictHandler {
      * @param ours  our version of the property
      * @return  {@link Resolution} of the conflict
      */
-    @Override
     @Nonnull
-    Resolution deleteDeletedProperty(NodeBuilder parent, PropertyState ours);
+    Resolution deleteDeletedProperty(NodeBuilder parent, PropertyState ours, PropertyState base);
 
     /**
      * The property {@code theirs} changed in the persistence store while it has been
@@ -100,9 +122,8 @@ public interface ConflictHandler extends PartialConflictHandler {
      * @param theirs  their version of the property
      * @return  {@link Resolution} of the conflict
      */
-    @Override
     @Nonnull
-    Resolution deleteChangedProperty(NodeBuilder parent, PropertyState theirs);
+    Resolution deleteChangedProperty(NodeBuilder parent, PropertyState theirs, PropertyState base);
 
     /**
      * The node {@code ours} has been added to {@code parent} which conflicts
@@ -114,9 +135,8 @@ public interface ConflictHandler extends PartialConflictHandler {
      * @param theirs  their version of the node
      * @return  {@link Resolution} of the conflict
      */
-    @Override
     @Nonnull
-    Resolution addExistingNode(NodeBuilder parent, String name, NodeState ours, NodeState theirs);
+    Resolution addExistingNode(NodeBuilder parent, String name, NodeState ours, NodeState theirs, NodeState base);
 
     /**
      * The node {@code ours} has been changed in {@code parent} while it was
@@ -127,9 +147,8 @@ public interface ConflictHandler extends PartialConflictHandler {
      * @param ours  our version of the node
      * @return  {@link Resolution} of the conflict
      */
-    @Override
     @Nonnull
-    Resolution changeDeletedNode(NodeBuilder parent, String name, NodeState ours);
+    Resolution changeDeletedNode(NodeBuilder parent, String name, NodeState ours, NodeState base);
 
     /**
      * The node {@code theirs} changed in the persistence store while it has been
@@ -140,9 +159,8 @@ public interface ConflictHandler extends PartialConflictHandler {
      * @param theirs  their version of the node
      * @return  {@link Resolution} of the conflict
      */
-    @Override
     @Nonnull
-    Resolution deleteChangedNode(NodeBuilder parent, String name, NodeState theirs);
+    Resolution deleteChangedNode(NodeBuilder parent, String name, NodeState theirs, NodeState base);
 
     /**
      * The node {@code name} has been removed in {@code parent} while it was
@@ -152,7 +170,6 @@ public interface ConflictHandler extends PartialConflictHandler {
      * @param name  name of the node
      * @return  {@link Resolution} of the conflict
      */
-    @Override
     @Nonnull
-    Resolution deleteDeletedNode(NodeBuilder parent, String name);
+    Resolution deleteDeletedNode(NodeBuilder parent, String name, NodeState base);
 }

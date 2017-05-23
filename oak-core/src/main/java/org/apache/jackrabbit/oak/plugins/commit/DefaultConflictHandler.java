@@ -28,6 +28,7 @@ import org.apache.jackrabbit.oak.spi.state.NodeState;
  * It can be used to implement default behaviour or as a base class for more specialised
  * implementations.
  */
+@Deprecated
 public class DefaultConflictHandler implements ConflictHandler {
 
     /**

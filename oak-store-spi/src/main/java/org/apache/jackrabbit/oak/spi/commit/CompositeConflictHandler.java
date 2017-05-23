@@ -30,6 +30,7 @@ import static org.apache.jackrabbit.oak.spi.state.ConflictType.DELETE_CHANGED_NO
 import static org.apache.jackrabbit.oak.spi.state.ConflictType.DELETE_CHANGED_PROPERTY;
 import static org.apache.jackrabbit.oak.spi.state.ConflictType.DELETE_DELETED_NODE;
 import static org.apache.jackrabbit.oak.spi.state.ConflictType.DELETE_DELETED_PROPERTY;
+import static org.apache.jackrabbit.oak.spi.commit.ThreeWayConflictHandler.Resolution.IGNORED;
 
 import java.util.LinkedList;
 
@@ -47,8 +48,8 @@ import org.apache.jackrabbit.oak.spi.state.NodeState;
  * conflict none of the backing handlers returns a valid resolution
  * this implementation throws an {@code IllegalStateException}.
  */
-public class CompositeConflictHandler implements ConflictHandler {
-    private final LinkedList<PartialConflictHandler> handlers;
+public class CompositeConflictHandler implements ThreeWayConflictHandler {
+    private final LinkedList<ThreeWayConflictHandler> handlers;
 
     /**
      * Create a new {@code CompositeConflictHandler} with an initial set of
@@ -56,7 +57,7 @@ public class CompositeConflictHandler implements ConflictHandler {
      * handlers.
      * @param handlers  the backing handlers
      */
-    public CompositeConflictHandler(@Nonnull Iterable<PartialConflictHandler> handlers) {
+    public CompositeConflictHandler(@Nonnull Iterable<ThreeWayConflictHandler> handlers) {
         this.handlers = newLinkedList(checkNotNull(handlers));
     }
 
@@ -74,16 +75,17 @@ public class CompositeConflictHandler implements ConflictHandler {
      * @param handler
      * @return this
      */
-    public CompositeConflictHandler addHandler(PartialConflictHandler handler) {
+    public CompositeConflictHandler addHandler(ThreeWayConflictHandler handler) {
         handlers.addFirst(handler);
         return this;
     }
 
     @Override
-    public Resolution addExistingProperty(NodeBuilder parent, PropertyState ours, PropertyState theirs) {
-        for (PartialConflictHandler handler : handlers) {
-            Resolution resolution = handler.addExistingProperty(parent, ours, theirs);
-            if (resolution != null) {
+    public Resolution addExistingProperty(NodeBuilder parent, PropertyState ours, PropertyState theirs,
+            PropertyState base) {
+        for (ThreeWayConflictHandler handler : handlers) {
+            Resolution resolution = handler.addExistingProperty(parent, ours, theirs, base);
+            if (resolution != /* null */ IGNORED) {
                 return resolution;
             }
         }
@@ -92,10 +94,10 @@ public class CompositeConflictHandler implements ConflictHandler {
     }
 
     @Override
-    public Resolution changeDeletedProperty(NodeBuilder parent, PropertyState ours) {
-        for (PartialConflictHandler handler : handlers) {
-            Resolution resolution = handler.changeDeletedProperty(parent, ours);
-            if (resolution != null) {
+    public Resolution changeDeletedProperty(NodeBuilder parent, PropertyState ours, PropertyState base) {
+        for (ThreeWayConflictHandler handler : handlers) {
+            Resolution resolution = handler.changeDeletedProperty(parent, ours, base);
+            if (resolution != /* null */ IGNORED) {
                 return resolution;
             }
         }
@@ -104,10 +106,11 @@ public class CompositeConflictHandler implements ConflictHandler {
     }
 
     @Override
-    public Resolution changeChangedProperty(NodeBuilder parent, PropertyState ours, PropertyState theirs) {
-        for (PartialConflictHandler handler : handlers) {
-            Resolution resolution = handler.changeChangedProperty(parent, ours, theirs);
-            if (resolution != null) {
+    public Resolution changeChangedProperty(NodeBuilder parent, PropertyState ours, PropertyState theirs,
+            PropertyState base) {
+        for (ThreeWayConflictHandler handler : handlers) {
+            Resolution resolution = handler.changeChangedProperty(parent, ours, theirs, base);
+            if (resolution != /* null */ IGNORED) {
                 return resolution;
             }
         }
@@ -116,10 +119,10 @@ public class CompositeConflictHandler implements ConflictHandler {
     }
 
     @Override
-    public Resolution deleteDeletedProperty(NodeBuilder parent, PropertyState ours) {
-        for (PartialConflictHandler handler : handlers) {
-            Resolution resolution = handler.deleteDeletedProperty(parent, ours);
-            if (resolution != null) {
+    public Resolution deleteDeletedProperty(NodeBuilder parent, PropertyState ours, PropertyState base) {
+        for (ThreeWayConflictHandler handler : handlers) {
+            Resolution resolution = handler.deleteDeletedProperty(parent, ours, base);
+            if (resolution != /* null */ IGNORED) {
                 return resolution;
             }
         }
@@ -128,10 +131,10 @@ public class CompositeConflictHandler implements ConflictHandler {
     }
 
     @Override
-    public Resolution deleteChangedProperty(NodeBuilder parent, PropertyState theirs) {
-        for (PartialConflictHandler handler : handlers) {
-            Resolution resolution = handler.deleteChangedProperty(parent, theirs);
-            if (resolution != null) {
+    public Resolution deleteChangedProperty(NodeBuilder parent, PropertyState theirs, PropertyState base) {
+        for (ThreeWayConflictHandler handler : handlers) {
+            Resolution resolution = handler.deleteChangedProperty(parent, theirs, base);
+            if (resolution != /* null */ IGNORED) {
                 return resolution;
             }
         }
@@ -140,10 +143,10 @@ public class CompositeConflictHandler implements ConflictHandler {
     }
 
     @Override
-    public Resolution addExistingNode(NodeBuilder parent, String name, NodeState ours, NodeState theirs) {
-        for (PartialConflictHandler handler : handlers) {
-            Resolution resolution = handler.addExistingNode(parent, name, ours, theirs);
-            if (resolution != null) {
+    public Resolution addExistingNode(NodeBuilder parent, String name, NodeState ours, NodeState theirs, NodeState base) {
+        for (ThreeWayConflictHandler handler : handlers) {
+            Resolution resolution = handler.addExistingNode(parent, name, ours, theirs, base);
+            if (resolution !=IGNORED) {
                 return resolution;
             }
         }
@@ -152,10 +155,10 @@ public class CompositeConflictHandler implements ConflictHandler {
     }
 
     @Override
-    public Resolution changeDeletedNode(NodeBuilder parent, String name, NodeState ours) {
-        for (PartialConflictHandler handler : handlers) {
-            Resolution resolution = handler.changeDeletedNode(parent, name, ours);
-            if (resolution != null) {
+    public Resolution changeDeletedNode(NodeBuilder parent, String name, NodeState ours, NodeState base) {
+        for (ThreeWayConflictHandler handler : handlers) {
+            Resolution resolution = handler.changeDeletedNode(parent, name, ours, base);
+            if (resolution != IGNORED) {
                 return resolution;
             }
         }
@@ -164,10 +167,10 @@ public class CompositeConflictHandler implements ConflictHandler {
     }
 
     @Override
-    public Resolution deleteChangedNode(NodeBuilder parent, String name, NodeState theirs) {
-        for (PartialConflictHandler handler : handlers) {
-            Resolution resolution = handler.deleteChangedNode(parent, name, theirs);
-            if (resolution != null) {
+    public Resolution deleteChangedNode(NodeBuilder parent, String name, NodeState theirs, NodeState base) {
+        for (ThreeWayConflictHandler handler : handlers) {
+            Resolution resolution = handler.deleteChangedNode(parent, name, theirs, base);
+            if (resolution != IGNORED) {
                 return resolution;
             }
         }
@@ -176,14 +179,15 @@ public class CompositeConflictHandler implements ConflictHandler {
     }
 
     @Override
-    public Resolution deleteDeletedNode(NodeBuilder parent, String name) {
-        for (PartialConflictHandler handler : handlers) {
-            Resolution resolution = handler.deleteDeletedNode(parent, name);
-            if (resolution != null) {
+    public Resolution deleteDeletedNode(NodeBuilder parent, String name, NodeState base) {
+        for (ThreeWayConflictHandler handler : handlers) {
+            Resolution resolution = handler.deleteDeletedNode(parent, name, base);
+            if (resolution != IGNORED) {
                 return resolution;
             }
         }
         throw new IllegalStateException("No conflict handler for " +
                 DELETE_DELETED_NODE + " conflict");
     }
+
 }

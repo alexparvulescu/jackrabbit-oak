@@ -41,6 +41,7 @@ import org.apache.jackrabbit.oak.spi.state.NodeState;
  *
  * @see ConflictHandler
  */
+@Deprecated
 public interface PartialConflictHandler {
 
     /**

@@ -53,10 +53,12 @@ import org.apache.jackrabbit.oak.security.SecurityProviderImpl;
 import org.apache.jackrabbit.oak.spi.commit.BackgroundObserver;
 import org.apache.jackrabbit.oak.spi.commit.CommitHook;
 import org.apache.jackrabbit.oak.spi.commit.CompositeConflictHandler;
+import org.apache.jackrabbit.oak.spi.commit.ConflictHandlers;
 import org.apache.jackrabbit.oak.spi.commit.Editor;
 import org.apache.jackrabbit.oak.spi.commit.EditorProvider;
 import org.apache.jackrabbit.oak.spi.commit.Observer;
 import org.apache.jackrabbit.oak.spi.commit.PartialConflictHandler;
+import org.apache.jackrabbit.oak.spi.commit.ThreeWayConflictHandler;
 import org.apache.jackrabbit.oak.spi.lifecycle.RepositoryInitializer;
 import org.apache.jackrabbit.oak.spi.query.QueryIndexProvider;
 import org.apache.jackrabbit.oak.spi.security.SecurityProvider;
@@ -216,8 +218,14 @@ public class Jcr {
         return this;
     }
 
+    @Deprecated
     @Nonnull
     public final Jcr with(@Nonnull PartialConflictHandler conflictHandler) {
+        return with(ConflictHandlers.wrap(conflictHandler));
+    }
+
+    @Nonnull
+    public final Jcr with(@Nonnull ThreeWayConflictHandler conflictHandler) {
         ensureRepositoryIsNotCreated();
         this.conflictHandler.addHandler(checkNotNull(conflictHandler));
         return this;
