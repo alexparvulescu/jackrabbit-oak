@@ -77,12 +77,38 @@ public class CompositeAuthorizationConfiguration extends CompositeConfiguration<
 
     private static final Logger log = LoggerFactory.getLogger(CompositeAuthorizationConfiguration.class);
 
+    public static enum CompositionType {
+
+        /**
+         * Break as soon as any one of the aggregated permission providers
+         * denies a privilege (default setup)
+         */
+        AND,
+
+        /**
+         * Check all aggregated permission providers for one that could provide
+         * a privilege (multiplexing setup)
+         */
+        OR
+    }
+
+    private CompositionType compositionType = CompositionType.AND;
+
     public CompositeAuthorizationConfiguration() {
         super(AuthorizationConfiguration.NAME);
     }
 
     public CompositeAuthorizationConfiguration(@Nonnull SecurityProvider securityProvider) {
         super(AuthorizationConfiguration.NAME, securityProvider);
+    }
+
+    public void withCompositionType(String ct) {
+        String or = CompositionType.OR.name();
+        if (or.equals(ct) || or.toLowerCase().equals(ct)) {
+            this.compositionType = CompositionType.OR;
+        } else {
+            this.compositionType = CompositionType.AND;
+        }
     }
 
     @Nonnull
@@ -134,7 +160,7 @@ public class CompositeAuthorizationConfiguration extends CompositeConfiguration<
             case 0: throw new IllegalStateException();
             case 1: return configurations.get(0).getPermissionProvider(root, workspaceName, principals);
             default:
-                List<AggregatedPermissionProvider> aggrPermissionProviders = new ArrayList(configurations.size());
+                List<AggregatedPermissionProvider> aggrPermissionProviders = new ArrayList<>(configurations.size());
                 for (AuthorizationConfiguration conf : configurations) {
                     PermissionProvider pProvider = conf.getPermissionProvider(root, workspaceName, principals);
                     if (pProvider instanceof AggregatedPermissionProvider) {
@@ -152,7 +178,7 @@ public class CompositeAuthorizationConfiguration extends CompositeConfiguration<
                         pp = aggrPermissionProviders.get(0);
                         break;
                     default :
-                        pp = new CompositePermissionProvider(root, aggrPermissionProviders, getContext());
+                        pp = new CompositePermissionProvider(root, aggrPermissionProviders, getContext(), compositionType);
                 }
                 return pp;
         }

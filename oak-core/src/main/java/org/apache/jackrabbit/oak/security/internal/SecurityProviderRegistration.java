@@ -94,6 +94,14 @@ import static com.google.common.collect.Lists.newCopyOnWriteArrayList;
                         "org.apache.jackrabbit.oak.security.user.UserAuthenticationFactoryImpl"
                 },
                 unbounded = PropertyUnbounded.ARRAY
+        ),
+        @Property(
+                name = "authorizationCompositionType",
+                label = "Authorization Composition Type (AND or OR)",
+                description = "Authorization aggregates existing providers for evaluation. Based on this"
+                        + "setting it can either compose them using AND (default) or OR operations.",
+                value = "AND",
+                propertyPrivate = true
         )
 })
 @References({
@@ -184,6 +192,7 @@ public class SecurityProviderRegistration {
 
             this.context = context;
         }
+        this.authorizationConfiguration.withCompositionType(getAuthorizationCompositionType(configuration));
 
         maybeRegister();
     }
@@ -199,6 +208,7 @@ public class SecurityProviderRegistration {
                 preconditions.addPrecondition(pid);
             }
         }
+        this.authorizationConfiguration.withCompositionType(getAuthorizationCompositionType(configuration));
 
         maybeUnregister();
         maybeRegister();
@@ -572,12 +582,15 @@ public class SecurityProviderRegistration {
         preconditions.removeCandidate(pid);
     }
 
-    private String getServicePid(Map<String, Object> properties) {
+    private static String getServicePid(Map<String, Object> properties) {
         return PropertiesUtil.toString(properties.get(Constants.SERVICE_PID), null);
     }
 
-    private String[] getRequiredServicePids(Map<String, Object> configuration) {
+    private static String[] getRequiredServicePids(Map<String, Object> configuration) {
         return PropertiesUtil.toStringArray(configuration.get("requiredServicePids"), new String[]{});
     }
 
+    private static String getAuthorizationCompositionType(Map<String, Object> properties) {
+        return PropertiesUtil.toString(properties.get("authorizationCompositionType"), null);
+    }
 }
