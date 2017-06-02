@@ -18,6 +18,7 @@
  */
 package org.apache.jackrabbit.oak.plugins.commit;
 
+import org.apache.jackrabbit.oak.security.user.RepMembersConflictHandler;
 import org.apache.jackrabbit.oak.spi.commit.CompositeConflictHandler;
 import org.apache.jackrabbit.oak.spi.commit.ConflictHandlers;
 
@@ -34,6 +35,7 @@ public final class JcrConflictHandler {
      */
     public static CompositeConflictHandler createJcrConflictHandler() {
         return new CompositeConflictHandler(ImmutableList.of(
+                new RepMembersConflictHandler(),
                 ConflictHandlers.wrap(new JcrLastModifiedConflictHandler()),
                 ConflictHandlers.wrap(new ChildOrderConflictHandler()),
                 new AnnotatingConflictHandler()));
