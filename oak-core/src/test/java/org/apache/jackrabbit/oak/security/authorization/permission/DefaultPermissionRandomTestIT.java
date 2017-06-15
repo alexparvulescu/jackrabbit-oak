@@ -16,6 +16,6 @@
  */
 package org.apache.jackrabbit.oak.security.authorization.permission;
 
-public class DefaultPermissionRandomTest extends AbstractPermissionRandomTest {
+public class DefaultPermissionRandomTestIT extends AbstractPermissionRandomTestIT {
 
 }

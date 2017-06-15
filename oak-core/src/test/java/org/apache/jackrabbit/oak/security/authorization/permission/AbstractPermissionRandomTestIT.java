@@ -67,7 +67,7 @@ import com.google.common.collect.Sets;
  * override the {@link #candidatePermissionProvider(Root, String, Set)}.
  *
  */
-public abstract class AbstractPermissionRandomTest extends AbstractSecurityTest {
+public abstract class AbstractPermissionRandomTestIT extends AbstractSecurityTest {
 
     protected final long seed = new Random().nextLong();
     private final Random random = new Random(seed);
