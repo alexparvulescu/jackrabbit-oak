@@ -28,6 +28,7 @@ import org.apache.felix.scr.annotations.Deactivate;
 import org.apache.felix.scr.annotations.Modified;
 import org.apache.felix.scr.annotations.Properties;
 import org.apache.felix.scr.annotations.Property;
+import org.apache.felix.scr.annotations.PropertyOption;
 import org.apache.felix.scr.annotations.PropertyUnbounded;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
@@ -97,11 +98,14 @@ import static com.google.common.collect.Lists.newCopyOnWriteArrayList;
         ),
         @Property(
                 name = "authorizationCompositionType",
-                label = "Authorization Composition Type (AND or OR)",
-                description = "Authorization aggregates existing providers for evaluation. Based on this"
-                        + "setting it can either compose them using AND (default) or OR operations.",
+                label = "Authorization Composition Type",
+                description = "The Composite Authorization model uses this flag to determine what type of logic "
+                        + "to apply to the existing providers.",
                 value = "AND",
-                propertyPrivate = true
+                options = {
+                        @PropertyOption(name = "AND", value = "AND"),
+                        @PropertyOption(name = "OR", value = "OR")
+                }
         )
 })
 @References({
