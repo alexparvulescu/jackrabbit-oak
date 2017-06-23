@@ -24,7 +24,7 @@ Multiplexing support is implemented as a composite `PermissionProvider` made of
 the default workspace provider and the existing mounts.
 This is available since Oak 1.7.3 [OAK-3777](https://issues.apache.org/jira/browse/OAK-3777).
 
-### Permission Evaluation (reading)
+### PermissionStore Evaluation (reading)
 
 Given the following mount setup
 
@@ -35,7 +35,7 @@ Given the following mount setup
         - /
 
 In above setup nodes under /apps and /libs (include apps and libs) are part of "private" mount (mount name is "private") and all other paths are part of default mount.
-Now lets see how mount information is used to manage storage in permission store.
+A dedicated PermissionStore will be created under `oak:mount-private-default` that contains information relevant to this specific mount.
 
     /jcr:system/rep:permissionStore
         + oak:mount-private-default
@@ -55,5 +55,5 @@ Now lets see how mount information is used to manage storage in permission store
 
 ### PermissionStore updates (writing)
 
-TODO
+The `PermissionHook` is now mount-aware and will delegate changes to specific path to their designated components based on path.
 
