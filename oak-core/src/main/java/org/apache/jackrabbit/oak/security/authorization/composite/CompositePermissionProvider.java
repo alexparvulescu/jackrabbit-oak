@@ -174,8 +174,6 @@ class CompositePermissionProvider implements PermissionProvider {
 
     @Override
     public boolean isGranted(@Nonnull Tree parent, @Nullable PropertyState property, long permissions) {
-        // TODO what if permissions==Permissions.NO_PERMISSION?
-
         Tree immParent = PermissionUtil.getImmutableTree(parent, immutableRoot);
 
         boolean isGranted = false;
@@ -204,8 +202,6 @@ class CompositePermissionProvider implements PermissionProvider {
 
     @Override
     public boolean isGranted(@Nonnull String oakPath, @Nonnull String jcrActions) {
-        // TODO what if jcrActions==""?
-
         TreeLocation location = TreeLocation.create(immutableRoot, oakPath);
         boolean isAcContent = ctx.definesLocation(location);
 
