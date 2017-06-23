@@ -44,6 +44,7 @@ import org.apache.jackrabbit.oak.spi.security.authorization.permission.Repositor
 import org.apache.jackrabbit.oak.spi.security.authorization.permission.TreePermission;
 import org.apache.jackrabbit.oak.spi.security.privilege.PrivilegeBits;
 import org.apache.jackrabbit.oak.spi.security.privilege.PrivilegeBitsProvider;
+import org.apache.jackrabbit.oak.spi.state.NodeState;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -55,7 +56,7 @@ import com.google.common.collect.Sets;
 public class CompositeProviderCustomMixTest extends AbstractSecurityTest {
 
     @Test
-    public void hasPrivileges() throws Exception {
+    public void hasPrivilegesTest() throws Exception {
         Set<String> supp1 = ImmutableSet.of(JCR_READ, JCR_NAMESPACE_MANAGEMENT);
         Set<String> supp2 = ImmutableSet.of(JCR_READ, JCR_WRITE);
         Set<String> all = Sets.union(supp1, supp2);
@@ -80,7 +81,7 @@ public class CompositeProviderCustomMixTest extends AbstractSecurityTest {
     }
 
     @Test
-    public void isGranted() throws Exception {
+    public void isGrantedTest() throws Exception {
         Set<String> supp1 = ImmutableSet.of(JCR_READ, JCR_NODE_TYPE_MANAGEMENT);
         Set<String> supp2 = ImmutableSet.of(JCR_READ, JCR_WRITE);
         Set<String> all = Sets.union(supp1, supp2);
@@ -126,7 +127,7 @@ public class CompositeProviderCustomMixTest extends AbstractSecurityTest {
     }
 
     @Test
-    public void getRepositoryPermission() throws Exception {
+    public void getRepositoryPermissionTest() throws Exception {
         Set<String> supp1 = ImmutableSet.of(JCR_READ, JCR_NODE_TYPE_MANAGEMENT);
         Set<String> supp2 = ImmutableSet.of(JCR_READ, JCR_WRITE);
         Set<String> all = Sets.union(supp1, supp2);
@@ -145,6 +146,37 @@ public class CompositeProviderCustomMixTest extends AbstractSecurityTest {
 
                         boolean expected = expected(ps, supp1, granted1, supp2, granted2, type, false);
                         boolean result = cpp.getRepositoryPermission().isGranted(mapToPermissions(ps, grantMap));
+
+                        String err = "Checking " + ps + " in {supported: " + supp1 + ", granted: " + granted1 + "} "
+                                + type + " {supported: " + supp2 + ", granted: " + granted2 + "}";
+                        assertEquals(err, expected, result);
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    public void getTreePermissionTest() throws Exception {
+        Set<String> supp1 = ImmutableSet.of(JCR_READ, JCR_NODE_TYPE_MANAGEMENT);
+        Set<String> supp2 = ImmutableSet.of(JCR_READ, JCR_WRITE);
+        Set<String> all = Sets.union(supp1, supp2);
+
+        Map<String, Long> grantMap = Maps.newHashMap();
+        grantMap.put(JCR_READ, Permissions.READ);
+        grantMap.put(JCR_NODE_TYPE_MANAGEMENT, Permissions.NODE_TYPE_MANAGEMENT);
+        grantMap.put(JCR_WRITE, Permissions.WRITE);
+
+        // tests all possible 256 shuffles
+        for (CompositionType type : CompositionType.values()) {
+            for (Set<String> granted1 : Sets.powerSet(supp1)) {
+                for (Set<String> granted2 : Sets.powerSet(supp2)) {
+                    for (Set<String> ps : Sets.powerSet(all)) {
+                        CompositePermissionProvider cpp = buildCpp(supp1, granted1, supp2, granted2, type, grantMap);
+
+                        boolean expected = expected(ps, supp1, granted1, supp2, granted2, type, false);
+                        boolean result = cpp.getTreePermission(root.getTree("/"), TreePermission.EMPTY)
+                                .isGranted(mapToPermissions(ps, grantMap));
 
                         String err = "Checking " + ps + " in {supported: " + supp1 + ", granted: " + granted1 + "} "
                                 + type + " {supported: " + supp2 + ", granted: " + granted2 + "}";
@@ -209,7 +241,6 @@ public class CompositeProviderCustomMixTest extends AbstractSecurityTest {
 
         private final Set<String> supported;
         private final Set<String> granted;
-
         private final Map<String, Long> grantMap;
 
         private CustomProvider(@Nonnull Root root, Set<String> supported, Set<String> granted,
@@ -241,18 +272,25 @@ public class CompositeProviderCustomMixTest extends AbstractSecurityTest {
             return granted.containsAll(in);
         }
 
-        @Override
-        public long supportedPermissions(@Nullable Tree tree, @Nullable PropertyState property, long permissions) {
+        private long supportedPermissions(long permissions) {
             long allperms = mapToPermissions(supported, grantMap);
             long delta = Permissions.diff(permissions, allperms);
             return Permissions.diff(permissions, delta);
         }
 
         @Override
+        public long supportedPermissions(@Nullable Tree tree, @Nullable PropertyState property, long permissions) {
+            return supportedPermissions(permissions);
+        }
+
+        @Override
         public long supportedPermissions(TreeLocation location, long permissions) {
-            long allperms = mapToPermissions(supported, grantMap);
-            long delta = Permissions.diff(permissions, allperms);
-            return Permissions.diff(permissions, delta);
+            return supportedPermissions(permissions);
+        }
+
+        @Override
+        public long supportedPermissions(TreePermission treePermission, PropertyState property, long permissions) {
+            return supportedPermissions(permissions);
         }
 
         @Override
@@ -280,6 +318,11 @@ public class CompositeProviderCustomMixTest extends AbstractSecurityTest {
         }
 
         @Override
+        public TreePermission getTreePermission(Tree tree, TreeType type, TreePermission parentPermission) {
+            return new CustomTreePermission(granted, grantMap);
+        }
+
+        @Override
         public void refresh() {
             Assert.fail("method should not be called");
         }
@@ -297,18 +340,6 @@ public class CompositeProviderCustomMixTest extends AbstractSecurityTest {
         }
 
         @Override
-        public long supportedPermissions(TreePermission treePermission, PropertyState property, long permissions) {
-            Assert.fail("method should not be called");
-            return 0;
-        }
-
-        @Override
-        public TreePermission getTreePermission(Tree tree, TreeType type, TreePermission parentPermission) {
-            Assert.fail("method should not be called");
-            return null;
-        }
-
-        @Override
         public boolean isGranted(String oakPath, String jcrActions) {
             Assert.fail("method should not be called");
             return false;
@@ -318,5 +349,59 @@ public class CompositeProviderCustomMixTest extends AbstractSecurityTest {
         public String toString() {
             return "CustomProvider [supported=" + supported + ", granted=" + granted + "]";
         }
+    }
+
+    private static class CustomTreePermission implements TreePermission {
+
+        private final Set<String> granted;
+        private final Map<String, Long> grantMap;
+
+        public CustomTreePermission(Set<String> granted, Map<String, Long> grantMap) {
+            this.granted = granted;
+            this.grantMap = grantMap;
+        }
+
+        @Override
+        public TreePermission getChildPermission(String childName, NodeState childState) {
+            Assert.fail("method should not be called");
+            return null;
+        }
+
+        @Override
+        public boolean canRead() {
+            Assert.fail("method should not be called");
+            return false;
+        }
+
+        @Override
+        public boolean canRead(PropertyState property) {
+            Assert.fail("method should not be called");
+            return false;
+        }
+
+        @Override
+        public boolean canReadAll() {
+            Assert.fail("method should not be called");
+            return false;
+        }
+
+        @Override
+        public boolean canReadProperties() {
+            Assert.fail("method should not be called");
+            return false;
+        }
+
+        @Override
+        public boolean isGranted(long permissions) {
+            long myperms = mapToPermissions(granted, grantMap);
+            return Permissions.includes(myperms, permissions);
+        }
+
+        @Override
+        public boolean isGranted(long permissions, PropertyState property) {
+            Assert.fail("method should not be called");
+            return false;
+        }
+
     }
 }

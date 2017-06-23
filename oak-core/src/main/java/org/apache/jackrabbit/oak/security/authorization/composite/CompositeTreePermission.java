@@ -202,16 +202,21 @@ final class CompositeTreePermission implements TreePermission {
             TreePermission tp = treePermissions[i];
             long supported = providers[i].supportedPermissions(tp, property, permissions);
             if (doEvaluate(supported)) {
-                boolean aGrant = (property == null) ? tp.isGranted(supported) : tp.isGranted(supported, property);
-                coveredPermissions |= supported;
-
-                if (!aGrant && compositionType == AND) {
-                    return false;
+                if (compositionType == AND) {
+                    isGranted = (property == null) ? tp.isGranted(supported) : tp.isGranted(supported, property);
+                    if (!isGranted) {
+                        return false;
+                    }
+                    coveredPermissions |= supported;
+                } else {
+                    for (long p : Permissions.aggregates(permissions)) {
+                        boolean aGrant = (property == null) ? tp.isGranted(p) : tp.isGranted(p, property);
+                        if (aGrant) {
+                            coveredPermissions |= p;
+                            isGranted = true;
+                        }
+                    }
                 }
-                if (aGrant && compositionType == OR) {
-                    return true;
-                }
-                isGranted = isGranted || aGrant;
             }
         }
         return isGranted && coveredPermissions == permissions;
