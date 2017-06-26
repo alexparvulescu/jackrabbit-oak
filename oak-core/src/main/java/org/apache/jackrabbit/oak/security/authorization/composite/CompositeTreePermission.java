@@ -53,7 +53,7 @@ final class CompositeTreePermission implements TreePermission {
 
     private CompositeTreePermission(@Nonnull ImmutableTree tree, @Nonnull TreeType type,
             @Nonnull TreeTypeProvider typeProvider, @Nonnull AggregatedPermissionProvider[] providers,
-            @Nonnull TreePermission[] treePermissions, int cnt, CompositionType compositionType) {
+            @Nonnull TreePermission[] treePermissions, int cnt, @Nonnull CompositionType compositionType) {
         this.tree = tree;
         this.type = type;
 
@@ -65,7 +65,7 @@ final class CompositeTreePermission implements TreePermission {
     }
 
     static TreePermission create(@Nonnull ImmutableTree rootTree, @Nonnull TreeTypeProvider typeProvider,
-            @Nonnull AggregatedPermissionProvider[] providers, CompositionType compositionType) {
+            @Nonnull AggregatedPermissionProvider[] providers, @Nonnull CompositionType compositionType) {
         switch (providers.length) {
             case 0 : return TreePermission.EMPTY;
             case 1 : return providers[0].getTreePermission(rootTree, TreeType.DEFAULT, TreePermission.EMPTY);

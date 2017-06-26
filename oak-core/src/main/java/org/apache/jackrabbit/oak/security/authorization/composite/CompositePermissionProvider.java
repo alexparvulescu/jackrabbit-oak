@@ -63,7 +63,7 @@ class CompositePermissionProvider implements PermissionProvider {
     private TreeTypeProvider typeProvider;
 
     CompositePermissionProvider(@Nonnull Root root, @Nonnull List<AggregatedPermissionProvider> pps,
-            @Nonnull Context acContext, CompositionType compositionType) {
+            @Nonnull Context acContext, @Nonnull CompositionType compositionType) {
         this.root = root;
         this.pps = pps.toArray(new AggregatedPermissionProvider[pps.size()]);
         this.ctx = acContext;
@@ -259,7 +259,8 @@ class CompositePermissionProvider implements PermissionProvider {
 
         private final CompositionType compositionType;
 
-        public CompositeRepositoryPermission(AggregatedPermissionProvider[] pps, CompositionType compositionType) {
+        public CompositeRepositoryPermission(@Nonnull AggregatedPermissionProvider[] pps,
+                @Nonnull CompositionType compositionType) {
             this.pps = pps;
             this.compositionType = compositionType;
         }

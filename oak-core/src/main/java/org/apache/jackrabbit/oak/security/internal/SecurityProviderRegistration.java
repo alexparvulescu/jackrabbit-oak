@@ -100,7 +100,7 @@ import static com.google.common.collect.Lists.newCopyOnWriteArrayList;
                 name = "authorizationCompositionType",
                 label = "Authorization Composition Type",
                 description = "The Composite Authorization model uses this flag to determine what type of logic "
-                        + "to apply to the existing providers.",
+                        + "to apply to the existing providers (default value is AND).",
                 value = "AND",
                 options = {
                         @PropertyOption(name = "AND", value = "AND"),
@@ -594,7 +594,8 @@ public class SecurityProviderRegistration {
         return PropertiesUtil.toStringArray(configuration.get("requiredServicePids"), new String[]{});
     }
 
+    @Nonnull
     private static String getAuthorizationCompositionType(Map<String, Object> properties) {
-        return PropertiesUtil.toString(properties.get("authorizationCompositionType"), null);
+        return PropertiesUtil.toString(properties.get("authorizationCompositionType"), "AND");
     }
 }
