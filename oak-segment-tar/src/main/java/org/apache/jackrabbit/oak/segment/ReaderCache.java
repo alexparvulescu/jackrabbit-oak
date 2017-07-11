@@ -70,11 +70,28 @@ public abstract class ReaderCache<T> {
         this.name = checkNotNull(name);
         this.weigher = checkNotNull(weigher);
         fastCache = new FastCache<>();
+
+        int segmentCount = 16;
+        if (System.getProperty("ReaderCache.segmentCount") != null) {
+            segmentCount = Integer.getInteger("ReaderCache.segmentCount");
+            System.err.println("ReaderCache.segmentCount[" + name + "] = " + segmentCount);
+        }
+
+        int stackMoveDistance = 16;
+        if (System.getProperty("ReaderCache.stackMoveDistance") != null) {
+            int p = Integer.getInteger("ReaderCache.stackMoveDistance");
+            stackMoveDistance = (int) (maxWeight / (averageWeight * segmentCount) * p / 100);
+            System.err.println("ReaderCache.stackMoveDistance[" + name + "] max: " + maxWeight + ", avg "
+                    + averageWeight + " = " + stackMoveDistance);
+        }
+
         cache = CacheLIRS.<CacheKey, T>newBuilder()
                 .module(name)
                 .maximumWeight(maxWeight)
                 .averageWeight(averageWeight)
                 .weigher(weigher)
+                .segmentCount(segmentCount)
+                .stackMoveDistance(stackMoveDistance)
                 .build();
     }
 
