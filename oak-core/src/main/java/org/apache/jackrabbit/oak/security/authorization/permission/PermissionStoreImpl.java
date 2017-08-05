@@ -41,7 +41,7 @@ import org.slf4j.LoggerFactory;
 /**
  * {@code PermissionStoreImpl}...
  */
-class PermissionStoreImpl implements PermissionStore, PermissionConstants {
+class PermissionStoreImpl extends AbstractPermissionStore {
 
     /**
      * default logger
@@ -63,6 +63,7 @@ class PermissionStoreImpl implements PermissionStore, PermissionConstants {
         reset(root);
     }
 
+    @Override
     void flush(@Nonnull Root root) {
         principalTreeMap.clear();
         reset(root);

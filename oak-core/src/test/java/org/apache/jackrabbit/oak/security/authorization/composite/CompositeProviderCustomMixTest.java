@@ -104,6 +104,7 @@ public class CompositeProviderCustomMixTest extends AbstractSecurityTest {
                         CompositePermissionProvider cpp = buildCpp(supp1, granted1, supp2, granted2, type, grantMap);
                         boolean expected = expected(ps, supp1, granted1, supp2, granted2, type, false);
 
+                        //TODO change null param
                         boolean result1 = cpp.isGranted(null, null, mapToPermissions(ps, grantMap));
                         String err1 = "[isGranted1] Checking " + ps + " in {supported: " + supp1 + ", granted: "
                                 + granted1 + "} " + type + " {supported: " + supp2 + ", granted: " + granted2 + "}";
