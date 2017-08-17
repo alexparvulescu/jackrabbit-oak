@@ -32,6 +32,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.jackrabbit.oak.commons.UUIDUtils.generateUUID;
 import static org.apache.jackrabbit.oak.plugins.identifier.IdentifierManager.getIdentifier;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * Base class for {@link UserProvider} and {@link MembershipProvider}.
  */
@@ -42,6 +45,8 @@ abstract class AuthorizableBaseProvider implements UserConstants {
     final IdentifierManager identifierManager;
 
     private final boolean usercaseMappedProfile;
+
+    private static final Map<String, String> cache = new ConcurrentHashMap<>();
 
     AuthorizableBaseProvider(@Nonnull Root root, @Nonnull ConfigurationParameters config) {
         this.root = checkNotNull(root);
@@ -58,7 +63,16 @@ abstract class AuthorizableBaseProvider implements UserConstants {
 
     @CheckForNull
     Tree getByContentID(@Nonnull String contentId, @Nonnull AuthorizableType authorizableType) {
-        Tree tree = identifierManager.getTree(contentId);
+        final Tree tree;
+        if (cache.containsKey(contentId)) {
+            tree = root.getTree(cache.get(contentId));
+        } else {
+            tree = identifierManager.getTree(contentId);
+            if (tree != null) {
+                cache.put(contentId, tree.getPath());
+            }
+        }
+
         if (UserUtil.isType(tree, authorizableType)) {
             return tree;
         } else {

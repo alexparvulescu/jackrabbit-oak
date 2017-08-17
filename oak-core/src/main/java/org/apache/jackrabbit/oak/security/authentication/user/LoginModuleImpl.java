@@ -118,6 +118,9 @@ public final class LoginModuleImpl extends AbstractLoginModule {
 
     @Override
     public boolean login() throws LoginException {
+        //long t = System.currentTimeMillis();
+        //long d0 = 0;
+
         credentials = getCredentials();
 
         // check if we have a pre authenticated login from a previous login module
@@ -126,10 +129,14 @@ public final class LoginModuleImpl extends AbstractLoginModule {
         Authentication authentication = getUserAuthentication(loginName);
         if (authentication != null) {
             if (preAuthLogin != null) {
+                // log.info("#login: preauth.");
                 success = authentication.authenticate(PreAuthenticatedLogin.PRE_AUTHENTICATED);
             } else {
                 success = authentication.authenticate(credentials);
+                log.info("#login: authenticate {}, {}: {}", loginName, credentials, success);
             }
+            // d0 = System.currentTimeMillis() - t;
+            // t = System.currentTimeMillis();
 
             if (success) {
                 log.debug("Adding Credentials to shared state.");
@@ -151,14 +158,23 @@ public final class LoginModuleImpl extends AbstractLoginModule {
             credentials = null;
             userId = null;
         }
+
+        // long d1 = System.currentTimeMillis() - t; 
+        // log.info("#login: {} in {}/{} ms.", success, d0, d1);
         return success;
     }
 
     @Override
     public boolean commit() {
+        //long t0 = System.currentTimeMillis();
+
         if (!success) {
             // login attempt in this login module was not successful
             clearState();
+
+            //long t1 = System.currentTimeMillis();
+            //log.info("#commit false in {} ms.", t1 - t0);
+
             return false;
         } else {
             if (!subject.isReadOnly()) {
@@ -174,6 +190,9 @@ public final class LoginModuleImpl extends AbstractLoginModule {
                 log.debug("Could not add information to read only subject {}", subject);
             }
             clearState();
+
+            //long t1 = System.currentTimeMillis();
+            //log.info("#commit true in {} ms.", t1 - t0);
             return true;
         }
     }

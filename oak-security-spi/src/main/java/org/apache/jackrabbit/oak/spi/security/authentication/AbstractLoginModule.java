@@ -17,6 +17,7 @@
 package org.apache.jackrabbit.oak.spi.security.authentication;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.Principal;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
@@ -37,9 +38,13 @@ import javax.security.auth.spi.LoginModule;
 
 import org.apache.jackrabbit.api.security.user.UserManager;
 import org.apache.jackrabbit.oak.api.AuthInfo;
+import org.apache.jackrabbit.oak.api.Blob;
+import org.apache.jackrabbit.oak.api.CommitFailedException;
 import org.apache.jackrabbit.oak.api.ContentRepository;
 import org.apache.jackrabbit.oak.api.ContentSession;
+import org.apache.jackrabbit.oak.api.QueryEngine;
 import org.apache.jackrabbit.oak.api.Root;
+import org.apache.jackrabbit.oak.api.Tree;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationParameters;
 import org.apache.jackrabbit.oak.spi.security.SecurityProvider;
@@ -54,6 +59,9 @@ import org.apache.jackrabbit.oak.spi.security.user.UserConfiguration;
 import org.apache.jackrabbit.oak.spi.whiteboard.Whiteboard;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 
 import org.osgi.annotation.versioning.ProviderType;
 
@@ -383,6 +391,16 @@ public abstract class AbstractLoginModule implements LoginModule {
      */
     @CheckForNull
     protected Root getRoot() {
+        if (!lazyRoot) {
+            return getRootEager();
+        } else {
+            return getRootLazy();
+        }
+    }
+
+    private static boolean lazyRoot = true; // Boolean.getBoolean("oak.login.lazyRoot");
+
+    private Root getRootEager() {
         if (root == null && callbackHandler != null) {
             try {
                 final RepositoryCallback rcb = new RepositoryCallback();
@@ -405,6 +423,19 @@ public abstract class AbstractLoginModule implements LoginModule {
             }
         }
         return root;
+    }
+
+    private final Root rootLazy = new LazyRoot(Suppliers.memoize(new Supplier<Root>() {
+
+        @Override
+        public Root get() {
+            log.info("#getRoot ", new Exception("getroot"));
+            return getRootEager();
+        }
+    }));
+
+    private Root getRootLazy() {
+        return rootLazy;
     }
 
     /**
@@ -506,4 +537,63 @@ public abstract class AbstractLoginModule implements LoginModule {
         }
         subject.getPublicCredentials().add(authInfo);
     }
+
+    private static final class LazyRoot implements Root {
+
+        // TODO make it null safe re. root object
+        private final Supplier<Root> root;
+
+        public LazyRoot(Supplier<Root> root) {
+            this.root = root;
+        }
+
+        private Root getRoot() {
+            return root.get();
+        }
+
+        public boolean move(String sourcePath, String destPath) {
+            return getRoot().move(sourcePath, destPath);
+        }
+
+        public Tree getTree(String path) {
+            return getRoot().getTree(path);
+        }
+
+        public void rebase() {
+            getRoot().rebase();
+        }
+
+        public void refresh() {
+            getRoot().refresh();
+        }
+
+        public void commit(Map<String, Object> info) throws CommitFailedException {
+            getRoot().commit(info);
+        }
+
+        public void commit() throws CommitFailedException {
+            getRoot().commit();
+        }
+
+        public boolean hasPendingChanges() {
+            return getRoot().hasPendingChanges();
+        }
+
+        public QueryEngine getQueryEngine() {
+            return getRoot().getQueryEngine();
+        }
+
+        public Blob createBlob(InputStream stream) throws IOException {
+            return getRoot().createBlob(stream);
+        }
+
+        public Blob getBlob(String reference) {
+            return getRoot().getBlob(reference);
+        }
+
+        public ContentSession getContentSession() {
+            return getRoot().getContentSession();
+        }
+    }
+
 }

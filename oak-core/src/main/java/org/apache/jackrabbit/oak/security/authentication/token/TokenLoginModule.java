@@ -125,13 +125,21 @@ public final class TokenLoginModule extends AbstractLoginModule {
     //--------------------------------------------------------< LoginModule >---
     @Override
     public boolean login() throws LoginException {
-        tokenProvider = getTokenProvider();
-        if (tokenProvider == null) {
-            return false;
-        }
+        
+        //TODO add credentials
 
+        long t0 = System.currentTimeMillis();
+
+        long t1 = System.currentTimeMillis();
         Credentials credentials = getCredentials();
-        if (credentials instanceof TokenCredentials) {
+        long t2 = System.currentTimeMillis();
+
+        if (credentials != null && credentials instanceof TokenCredentials) {
+            TokenProvider tokenProvider = getTokenProvider();
+            if (tokenProvider == null) {
+                return false;
+            }
+
             TokenCredentials tc = (TokenCredentials) credentials;
             TokenAuthentication authentication = new TokenAuthentication(tokenProvider);
             if (authentication.authenticate(tc)) {
@@ -142,22 +150,41 @@ public final class TokenLoginModule extends AbstractLoginModule {
 
                 log.debug("Login: adding login name to shared state.");
                 sharedState.put(SHARED_KEY_LOGIN_NAME, userId);
-                return true;
-            }
-        }
 
-        return false;
+                long d = System.currentTimeMillis() - t2;
+                log.info("#login true in {}/{}/ ms via {}/{}", t1 - t0, t2-t1, d, userId, tc.getToken());
+
+                return true;
+            } else {
+                long d = System.currentTimeMillis() - t2;
+                log.info("#login false in {}/{}/{} ms via {}", t1 - t0, t2 - t1, d, tc.getToken());
+                return false;
+            }
+        } else {
+            long d = System.currentTimeMillis() - t2;
+            log.info("#login skipped for {} in {}/{}/{} ms.", credentials,  t1 - t0, t2 - t1, d);
+            return false;
+        }
     }
 
     @Override
     public boolean commit() throws LoginException {
+      //TODO add credentials
+        
+        long t0 = System.currentTimeMillis();
+
         if (tokenCredentials != null && userId != null) {
             Set<? extends Principal> principals = (principal != null) ? getPrincipals(principal) : getPrincipals(userId);
             updateSubject(tokenCredentials, getAuthInfo(tokenInfo, principals), principals);
             return true;
         }
         try{
-            if (tokenProvider != null && sharedState.containsKey(SHARED_KEY_CREDENTIALS)) {
+            if (sharedState.containsKey(SHARED_KEY_CREDENTIALS)) {
+                TokenProvider tokenProvider = getTokenProvider();
+                if (tokenProvider == null) {
+                    return false;
+                }
+
                 Credentials shared = getSharedCredentials();
                 if (shared != null && tokenProvider.doCreateToken(shared)) {
                     Root r = getRoot();
@@ -177,13 +204,23 @@ public final class TokenLoginModule extends AbstractLoginModule {
                         }
                         sharedState.put(SHARED_KEY_ATTRIBUTES, attributes);
                         updateSubject(tc, null, null);
+
+                        long t1 = System.currentTimeMillis();
+                        log.info("#commit token created via {}/{}  {} ms.", userId, tc.getToken(), t1 - t0);
+
                     } else {
                         // failed to create token -> fail commit()
                         Object logId = (userId != null) ? userId : sharedState.get(SHARED_KEY_LOGIN_NAME);
-                        log.debug("TokenProvider failed to create a login token for user " + logId);
+                        log.info("#commit TokenProvider failed to create a login token for user " + logId);
                         throw new LoginException("Failed to create login token for user " + logId);
                     }
+                } else {
+                    long t1 = System.currentTimeMillis();
+                    log.info("#commit skipped token creation (no doCreateToken) {} ms.", t1 - t0);
                 }
+            } else {
+                long t1 = System.currentTimeMillis();
+                log.info("#commit skipped token creation (no shared key) {} ms.", t1 - t0);
             }
         } finally {
             // the login attempt on this module did not succeed: clear state
@@ -207,6 +244,7 @@ public final class TokenLoginModule extends AbstractLoginModule {
         tokenCredentials = null;
         tokenInfo = null;
         userId = null;
+        tokenProvider = null;
     }
 
     //------------------------------------------------------------< private >---
@@ -217,6 +255,13 @@ public final class TokenLoginModule extends AbstractLoginModule {
      */
     @CheckForNull
     private TokenProvider getTokenProvider() {
+        if (tokenProvider == null) {
+            tokenProvider = initTokenProvider();
+        }
+        return tokenProvider;
+    }
+
+    private TokenProvider initTokenProvider() {
         TokenProvider provider = null;
         SecurityProvider securityProvider = getSecurityProvider();
         Root root = getRoot();

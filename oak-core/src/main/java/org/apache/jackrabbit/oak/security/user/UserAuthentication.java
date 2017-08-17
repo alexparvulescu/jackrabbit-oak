@@ -208,10 +208,10 @@ class UserAuthentication implements Authentication, UserConstants {
     private boolean impersonate(AuthInfo info, User user) {
         try {
             if (user.getID().equals(info.getUserID())) {
-                log.debug("User " + info.getUserID() + " wants to impersonate himself -> success.");
+                log.info("User " + info.getUserID() + " wants to impersonate himself -> success.");
                 return true;
             } else {
-                log.debug("User " + info.getUserID() + " wants to impersonate " + user.getID());
+                log.info("User " + info.getUserID() + " wants to impersonate " + user.getID());
                 Subject subject = new Subject(true, info.getPrincipals(), Collections.emptySet(), Collections.emptySet());
                 return user.getImpersonation().allows(subject);
             }

@@ -19,6 +19,7 @@ package org.apache.jackrabbit.oak.spi.security.authentication;
 import org.apache.jackrabbit.oak.api.AuthInfo;
 
 import javax.jcr.Credentials;
+import javax.jcr.SimpleCredentials;
 
 /**
  * Implementation of the JCR {@code Credentials} interface used to distinguish
@@ -55,5 +56,14 @@ public class ImpersonationCredentials implements Credentials {
      */
     public AuthInfo getImpersonatorInfo() {
         return authInfo;
+    }
+
+    @Override
+    public String toString() {
+        String base = baseCredentials.toString();
+        if (baseCredentials instanceof SimpleCredentials) {
+            base = ((SimpleCredentials) baseCredentials).getUserID();
+        }
+        return "IC[baseCredentials=" + base + ", authInfo=" + authInfo + "]";
     }
 }
