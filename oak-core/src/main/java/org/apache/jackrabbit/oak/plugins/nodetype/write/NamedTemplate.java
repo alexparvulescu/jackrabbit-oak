@@ -21,7 +21,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.jcr.nodetype.ConstraintViolationException;
 
-import org.apache.jackrabbit.oak.namepath.JcrNameParser;
+import org.apache.jackrabbit.oak.namepath.impl.JcrNameParser;
 import org.apache.jackrabbit.oak.namepath.NameMapper;
 
 /**
