@@ -14,7 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.jackrabbit.oak.namepath.impl;
+package org.apache.jackrabbit.oak.namepath;
+
+import org.apache.jackrabbit.oak.namepath.JcrNameParser;
 
 /**
  * TODO document

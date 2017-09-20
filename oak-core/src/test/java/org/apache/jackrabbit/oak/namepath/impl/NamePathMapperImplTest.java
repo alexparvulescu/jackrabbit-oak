@@ -31,10 +31,7 @@ import javax.jcr.RepositoryException;
 import com.google.common.collect.ImmutableMap;
 import org.apache.jackrabbit.oak.namepath.NameMapper;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
-import org.apache.jackrabbit.oak.namepath.impl.GlobalNameMapper;
-import org.apache.jackrabbit.oak.namepath.impl.JcrPathParser;
-import org.apache.jackrabbit.oak.namepath.impl.LocalNameMapper;
-import org.apache.jackrabbit.oak.namepath.impl.NamePathMapperImpl;
+import org.apache.jackrabbit.oak.namepath.JcrPathParser;
 import org.apache.jackrabbit.oak.plugins.identifier.IdentifierManager;
 import org.junit.Test;
 
