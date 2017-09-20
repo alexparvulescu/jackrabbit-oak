@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.jackrabbit.oak.plugins.name;
+package org.apache.jackrabbit.oak.spi.namespace;
 
 import java.util.Arrays;
 import java.util.Collection;

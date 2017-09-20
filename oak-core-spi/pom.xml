@@ -44,6 +44,7 @@
               org.apache.jackrabbit.oak.spi.namespace,
               org.apache.jackrabbit.oak.spi.nodetype,
               org.apache.jackrabbit.oak.spi.mount,
+              org.apache.jackrabbit.oak.spi.version,
               org.apache.jackrabbit.oak.spi.whiteboard,
               org.apache.jackrabbit.oak.stats
             </Export-Package>
