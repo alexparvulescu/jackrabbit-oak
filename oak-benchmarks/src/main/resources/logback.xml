@@ -47,6 +47,10 @@
   <!-- Display information messages from oak-run check (oak-segment-tar) -->
   <logger name="org.apache.jackrabbit.oak.segment.file.tooling.ConsistencyChecker" level="DEBUG"/>
 
+  <!-- temp debug for OAK-6818 -->
+  <logger name="org.apache.jackrabbit.oak.security.authentication.token.TokenProviderImpl" level="WARN"/>
+  <!-- logger name="org.apache.jackrabbit.oak.plugins.commit.ConflictValidator" level="DEBUG"/ -->
+
   <root level="warn">
     <appender-ref ref="STDERR" />
   </root>
