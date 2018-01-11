@@ -25,6 +25,7 @@ import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -70,9 +71,15 @@ public class CompositePrincipalProvider implements PrincipalProvider {
     @Nonnull
     @Override
     public Set<Group> getGroupMembership(@Nonnull Principal principal) {
-        Set<Group> groups = new HashSet<Group>();
+        return ImmutableSet.of();
+    }
+
+    @Nonnull
+    @Override
+    public Set<Principal> getMembershipPrincipals(@Nonnull Principal principal) {
+        Set<Principal> groups = new HashSet<>();
         for (PrincipalProvider provider : providers) {
-            groups.addAll(provider.getGroupMembership(principal));
+            groups.addAll(provider.getMembershipPrincipals(principal));
         }
         return groups;
     }

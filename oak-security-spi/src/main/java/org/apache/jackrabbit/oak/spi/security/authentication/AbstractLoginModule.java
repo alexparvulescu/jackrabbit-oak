@@ -48,6 +48,7 @@ import org.apache.jackrabbit.oak.spi.security.authentication.callback.PrincipalP
 import org.apache.jackrabbit.oak.spi.security.authentication.callback.RepositoryCallback;
 import org.apache.jackrabbit.oak.spi.security.authentication.callback.UserManagerCallback;
 import org.apache.jackrabbit.oak.spi.security.authentication.callback.WhiteboardCallback;
+import org.apache.jackrabbit.oak.spi.security.principal.GroupPrincipals;
 import org.apache.jackrabbit.oak.spi.security.principal.PrincipalConfiguration;
 import org.apache.jackrabbit.oak.spi.security.principal.PrincipalProvider;
 import org.apache.jackrabbit.oak.spi.security.user.UserConfiguration;
@@ -492,9 +493,9 @@ public abstract class AbstractLoginModule implements LoginModule {
             log.debug("Cannot retrieve principals. No principal provider configured.");
             return Collections.emptySet();
         } else {
-            Set<Principal> principals = new HashSet();
+            Set<Principal> principals = new HashSet<>();
             principals.add(userPrincipal);
-            principals.addAll(principalProvider.getGroupMembership(userPrincipal));
+            principals.addAll(principalProvider.getMembershipPrincipals(userPrincipal));
             return principals;
         }
     }

@@ -49,6 +49,12 @@ public final class EmptyPrincipalProvider implements PrincipalProvider {
 
     @Nonnull
     @Override
+    public Set<Principal> getMembershipPrincipals(@Nonnull Principal principal) {
+        return ImmutableSet.of();
+    }
+
+    @Nonnull
+    @Override
     public Set<? extends Principal> getPrincipals(@Nonnull String userID) {
         return ImmutableSet.of();
     }
