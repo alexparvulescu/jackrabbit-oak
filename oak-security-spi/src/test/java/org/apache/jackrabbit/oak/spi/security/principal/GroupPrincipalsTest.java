@@ -16,20 +16,14 @@
  */
 package org.apache.jackrabbit.oak.spi.security.principal;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.security.Principal;
-import java.security.acl.Group;
 import java.util.Enumeration;
-import java.util.Set;
 
+import org.apache.jackrabbit.api.security.principal.GroupPrincipal;
 import org.junit.Test;
-
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Sets;
 
 public class GroupPrincipalsTest {
 
@@ -38,16 +32,10 @@ public class GroupPrincipalsTest {
         Principal p0 = new PrincipalImpl("test");
         assertFalse(GroupPrincipals.isGroup(p0));
 
-        Group g = new Group() {
-
+        GroupPrincipal g = new GroupPrincipal() {
             @Override
             public String getName() {
                 return "testG";
-            }
-
-            @Override
-            public boolean removeMember(Principal user) {
-                return false;
             }
 
             @Override
@@ -56,60 +44,10 @@ public class GroupPrincipalsTest {
             }
 
             @Override
-            public boolean isMember(Principal member) {
-                return false;
-            }
-
-            @Override
-            public boolean addMember(Principal user) {
+            public boolean isMember(Principal p) {
                 return false;
             }
         };
-
         assertTrue(GroupPrincipals.isGroup(g));
-        assertTrue(GroupPrincipals.isGroup(new GroupPrincipalWrapper(g)));
-    }
-
-    @Test
-    public void testTransform() {
-        Group g = new Group() {
-
-            @Override
-            public String getName() {
-                return "testG";
-            }
-
-            @Override
-            public boolean removeMember(Principal user) {
-                return false;
-            }
-
-            @Override
-            public Enumeration<? extends Principal> members() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public boolean isMember(Principal member) {
-                return false;
-            }
-
-            @Override
-            public boolean addMember(Principal user) {
-                return false;
-            }
-        };
-
-        Set<Principal> t = GroupPrincipals.transform(ImmutableSet.of(g));
-        assertEquals(1, t.size());
-        Principal p = t.iterator().next();
-        assertEquals(p.getName(), g.getName());
-
-        Enumeration<? extends Principal> e = GroupPrincipals
-                .transform(Iterators.asEnumeration(ImmutableSet.of(g).iterator()));
-        Set<Principal> t2 = Sets.newHashSet(Iterators.forEnumeration(e));
-        assertEquals(1, t2.size());
-        Principal p2 = t2.iterator().next();
-        assertEquals(p2.getName(), g.getName());
     }
 }
