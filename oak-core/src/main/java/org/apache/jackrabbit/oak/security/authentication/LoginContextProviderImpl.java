@@ -74,7 +74,7 @@ class LoginContextProviderImpl implements LoginContextProvider {
             throws LoginException {
         Subject subject = getSubject();
         if (subject != null && credentials == null) {
-            log.info("Found pre-authenticated subject: No further login actions required {}, {}", credentials, subject);
+            log.debug("Found pre-authenticated subject: No further login actions required.");
             return new PreAuthContext(subject);
         }
 

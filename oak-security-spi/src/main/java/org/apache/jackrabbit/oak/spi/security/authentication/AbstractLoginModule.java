@@ -17,7 +17,6 @@
 package org.apache.jackrabbit.oak.spi.security.authentication;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.security.Principal;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
@@ -38,13 +37,9 @@ import javax.security.auth.spi.LoginModule;
 
 import org.apache.jackrabbit.api.security.user.UserManager;
 import org.apache.jackrabbit.oak.api.AuthInfo;
-import org.apache.jackrabbit.oak.api.Blob;
-import org.apache.jackrabbit.oak.api.CommitFailedException;
 import org.apache.jackrabbit.oak.api.ContentRepository;
 import org.apache.jackrabbit.oak.api.ContentSession;
-import org.apache.jackrabbit.oak.api.QueryEngine;
 import org.apache.jackrabbit.oak.api.Root;
-import org.apache.jackrabbit.oak.api.Tree;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationParameters;
 import org.apache.jackrabbit.oak.spi.security.SecurityProvider;
@@ -59,9 +54,6 @@ import org.apache.jackrabbit.oak.spi.security.user.UserConfiguration;
 import org.apache.jackrabbit.oak.spi.whiteboard.Whiteboard;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 
 import org.osgi.annotation.versioning.ProviderType;
 
@@ -195,6 +187,16 @@ public abstract class AbstractLoginModule implements LoginModule {
 
     @Override
     public boolean logout() throws LoginException {
+        long s = System.currentTimeMillis();
+        try {
+            return logout2();
+        } finally {
+            long d = System.currentTimeMillis() - s;
+            log.error("#logout " + getClass().getSimpleName() + "   " + d + " ms.");
+        }
+    }
+
+    public boolean logout2() throws LoginException {
         boolean success = false;
         if (!subject.getPrincipals().isEmpty() && !subject.getPublicCredentials(Credentials.class).isEmpty()) {
             // clear subject if not readonly
@@ -219,6 +221,16 @@ public abstract class AbstractLoginModule implements LoginModule {
      * Clear state information that has been created during {@link #login()}.
      */
     protected void clearState() {
+        long s = System.currentTimeMillis();
+        try {
+            clearState2();
+        } finally {
+            long d = System.currentTimeMillis() - s;
+            log.error("#clearState " + getClass().getSimpleName() + "   " + d + " ms.");
+        }
+    }
+
+    protected void clearState2() {
         securityProvider = null;
         root = null;
         if (systemSession != null) {
@@ -249,6 +261,17 @@ public abstract class AbstractLoginModule implements LoginModule {
      */
     @CheckForNull
     protected Credentials getCredentials() {
+        long s = System.currentTimeMillis();
+        try {
+            return getCredentials2();
+        } finally {
+            long d = System.currentTimeMillis() - s;
+            log.error("#getCredentials " + getClass().getSimpleName() + "   " + d + " ms.");
+        }
+    }
+
+    @CheckForNull
+    protected Credentials getCredentials2() {
         Set<Class> supported = getSupportedCredentials();
         if (callbackHandler != null) {
             log.debug("Login: retrieving Credentials using callback.");
@@ -345,6 +368,17 @@ public abstract class AbstractLoginModule implements LoginModule {
      */
     @CheckForNull
     protected SecurityProvider getSecurityProvider() {
+        long s = System.currentTimeMillis();
+        try {
+            return getSecurityProvider2();
+        } finally {
+            long d = System.currentTimeMillis() - s;
+            log.error("#getSecurityProvider " + getClass().getSimpleName() + "   " + d + " ms.");
+        }
+    }
+
+    @CheckForNull
+    protected SecurityProvider getSecurityProvider2() {
         if (securityProvider == null && callbackHandler != null) {
             RepositoryCallback rcb = new RepositoryCallback();
             try {
@@ -391,16 +425,16 @@ public abstract class AbstractLoginModule implements LoginModule {
      */
     @CheckForNull
     protected Root getRoot() {
-        if (!lazyRoot) {
-            return getRootEager();
-        } else {
-            return getRootLazy();
+        long s = System.currentTimeMillis();
+        try {
+            return getRoot2();
+        } finally {
+            long d = System.currentTimeMillis() - s;
+            log.error("#getRoot " + getClass().getSimpleName() + "   " + d + " ms.");
         }
     }
 
-    private static boolean lazyRoot = true; // Boolean.getBoolean("oak.login.lazyRoot");
-
-    private Root getRootEager() {
+    private Root getRoot2() {
         if (root == null && callbackHandler != null) {
             try {
                 final RepositoryCallback rcb = new RepositoryCallback();
@@ -425,18 +459,18 @@ public abstract class AbstractLoginModule implements LoginModule {
         return root;
     }
 
-    private final Root rootLazy = new LazyRoot(Suppliers.memoize(new Supplier<Root>() {
-
-        @Override
-        public Root get() {
-            log.info("#getRoot ", new Exception("getroot"));
-            return getRootEager();
-        }
-    }));
-
-    private Root getRootLazy() {
-        return rootLazy;
-    }
+//    private final Root rootLazy = new LazyRoot(Suppliers.memoize(new Supplier<Root>() {
+//
+//        @Override
+//        public Root get() {
+//            log.info("#getRoot ", new Exception("getroot"));
+//            return getRootEager();
+//        }
+//    }));
+//
+//    private Root getRootLazy() {
+//        return rootLazy;
+//    }
 
     /**
      * Retrieves the {@link UserManager} that should be used to handle
@@ -477,6 +511,7 @@ public abstract class AbstractLoginModule implements LoginModule {
      */
     @CheckForNull
     protected PrincipalProvider getPrincipalProvider() {
+        //TODO instrument this
         PrincipalProvider principalProvider = null;
         SecurityProvider sp = getSecurityProvider();
         Root r = getRoot();
@@ -507,6 +542,7 @@ public abstract class AbstractLoginModule implements LoginModule {
      */
     @Nonnull
     protected Set<? extends Principal> getPrincipals(@Nonnull String userId) {
+        //TODO instrument this
         PrincipalProvider principalProvider = getPrincipalProvider();
         if (principalProvider == null) {
             log.debug("Cannot retrieve principals. No principal provider configured.");
@@ -518,6 +554,7 @@ public abstract class AbstractLoginModule implements LoginModule {
 
     @Nonnull
     protected Set<? extends Principal> getPrincipals(@Nonnull Principal userPrincipal) {
+        //TODO instrument this
         PrincipalProvider principalProvider = getPrincipalProvider();
         if (principalProvider == null) {
             log.debug("Cannot retrieve principals. No principal provider configured.");
@@ -538,62 +575,61 @@ public abstract class AbstractLoginModule implements LoginModule {
         subject.getPublicCredentials().add(authInfo);
     }
 
-    private static final class LazyRoot implements Root {
-
-        // TODO make it null safe re. root object
-        private final Supplier<Root> root;
-
-        public LazyRoot(Supplier<Root> root) {
-            this.root = root;
-        }
-
-        private Root getRoot() {
-            return root.get();
-        }
-
-        public boolean move(String sourcePath, String destPath) {
-            return getRoot().move(sourcePath, destPath);
-        }
-
-        public Tree getTree(String path) {
-            return getRoot().getTree(path);
-        }
-
-        public void rebase() {
-            getRoot().rebase();
-        }
-
-        public void refresh() {
-            getRoot().refresh();
-        }
-
-        public void commit(Map<String, Object> info) throws CommitFailedException {
-            getRoot().commit(info);
-        }
-
-        public void commit() throws CommitFailedException {
-            getRoot().commit();
-        }
-
-        public boolean hasPendingChanges() {
-            return getRoot().hasPendingChanges();
-        }
-
-        public QueryEngine getQueryEngine() {
-            return getRoot().getQueryEngine();
-        }
-
-        public Blob createBlob(InputStream stream) throws IOException {
-            return getRoot().createBlob(stream);
-        }
-
-        public Blob getBlob(String reference) {
-            return getRoot().getBlob(reference);
-        }
-
-        public ContentSession getContentSession() {
-            return getRoot().getContentSession();
-        }
-    }
+//    private static final class LazyRoot implements Root {
+//
+//        private final Supplier<Root> root;
+//
+//        public LazyRoot(Supplier<Root> root) {
+//            this.root = root;
+//        }
+//
+//        private Root getRoot() {
+//            return root.get();
+//        }
+//
+//        public boolean move(String sourcePath, String destPath) {
+//            return getRoot().move(sourcePath, destPath);
+//        }
+//
+//        public Tree getTree(String path) {
+//            return getRoot().getTree(path);
+//        }
+//
+//        public void rebase() {
+//            getRoot().rebase();
+//        }
+//
+//        public void refresh() {
+//            getRoot().refresh();
+//        }
+//
+//        public void commit(Map<String, Object> info) throws CommitFailedException {
+//            getRoot().commit(info);
+//        }
+//
+//        public void commit() throws CommitFailedException {
+//            getRoot().commit();
+//        }
+//
+//        public boolean hasPendingChanges() {
+//            return getRoot().hasPendingChanges();
+//        }
+//
+//        public QueryEngine getQueryEngine() {
+//            return getRoot().getQueryEngine();
+//        }
+//
+//        public Blob createBlob(InputStream stream) throws IOException {
+//            return getRoot().createBlob(stream);
+//        }
+//
+//        public Blob getBlob(String reference) {
+//            return getRoot().getBlob(reference);
+//        }
+//
+//        public ContentSession getContentSession() {
+//            return getRoot().getContentSession();
+//        }
+//    }
 
 }
