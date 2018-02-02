@@ -18,6 +18,7 @@ package org.apache.jackrabbit.oak.spi.security.principal;
 
 import java.security.Principal;
 import java.security.acl.Group;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Set;
@@ -51,6 +52,37 @@ public final class GroupPrincipals {
      */
     public static boolean isGroup(@Nonnull Principal principal) {
         return principal instanceof Group || principal instanceof GroupPrincipal;
+    }
+
+    /**
+     * Returns an enumeration of the members in the group.
+     * @param principal the principal whose membership is listed.
+     * @return an enumeration of the group members.
+     */
+    public static Enumeration<? extends Principal> members(@Nonnull Principal principal) {
+        if (principal instanceof Group) {
+            return ((Group) principal).members();
+        }
+        if (principal instanceof GroupPrincipal) {
+            return ((GroupPrincipal) principal).members();
+        }
+        return Collections.emptyEnumeration();
+    }
+
+    /**
+     * Returns true if the passed principal is a member of the group.
+     * @param principal the principal whose members are being checked.
+     * @param member the principal whose membership is to be checked.
+     * @return true if the principal is a member of this group, false otherwise.
+     */
+    public static boolean isMember(@Nonnull Principal principal, @Nonnull Principal member) {
+        if (principal instanceof Group) {
+            return ((Group) principal).isMember(member);
+        }
+        if (principal instanceof GroupPrincipal) {
+            return ((GroupPrincipal) principal).isMember(member);
+        }
+        return false;
     }
 
     public static Set<Principal> transform(Set<Group> groups) {
