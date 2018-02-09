@@ -110,10 +110,17 @@ final class CompiledPermissionImpl implements CompiledPermissions, PermissionCon
             }
         }
 
-        PermissionEntryCache cache = new PermissionEntryCache();
-        userStore = new PermissionEntryProviderImpl(store, cache, userNames, options);
-        groupStore = new PermissionEntryProviderImpl(store, cache, groupNames, options);
-
+        PermissionEntryCache cache = new PermissionEntryCache(store, options);
+        if (!userNames.isEmpty()) {
+            userStore = new PermissionEntryProviderImpl(store, cache, userNames, options);
+        } else {
+            userStore = null;
+        }
+        if (!groupNames.isEmpty()) {
+            groupStore = new PermissionEntryProviderImpl(store, cache, groupNames, options);
+        } else {
+            groupStore = null;
+        }
         typeProvider = new TreeTypeProvider(ctx);
     }
 
@@ -140,8 +147,12 @@ final class CompiledPermissionImpl implements CompiledPermissions, PermissionCon
         this.versionManager = null;
 
         store.flush(root);
-        userStore.flush();
-        groupStore.flush();
+        if (userStore != null) {
+            userStore.flush();
+        }
+        if (groupStore != null) {
+            groupStore.flush();
+        }
     }
 
     @Nonnull
@@ -416,8 +427,18 @@ final class CompiledPermissionImpl implements CompiledPermissions, PermissionCon
 
     @Nonnull
     private Iterator<PermissionEntry> getEntryIterator(@Nonnull EntryPredicate predicate) {
-        Iterator<PermissionEntry> userEntries = userStore.getEntryIterator(predicate);
-        Iterator<PermissionEntry> groupEntries = groupStore.getEntryIterator(predicate);
+        Iterator<PermissionEntry> userEntries;
+        if (userStore != null) {
+            userEntries = userStore.getEntryIterator(predicate);
+        } else {
+            userEntries = Collections.emptyIterator();
+        }
+        Iterator<PermissionEntry> groupEntries;
+        if (groupStore != null) {
+            groupEntries = groupStore.getEntryIterator(predicate);
+        } else {
+            groupEntries = Collections.emptyIterator();
+        }
         return concat(userEntries, groupEntries);
     }
 
@@ -569,14 +590,14 @@ final class CompiledPermissionImpl implements CompiledPermissions, PermissionCon
 
         private Iterator<PermissionEntry> getUserEntries() {
             if (userEntries == null) {
-                userEntries = userStore.getEntries(tree);
+                userEntries = userStore != null ? userStore.getEntries(tree) : Collections.emptySet();
             }
             return userEntries.iterator();
         }
 
         private Iterator<PermissionEntry> getGroupEntries() {
             if (groupEntries == null) {
-                groupEntries = groupStore.getEntries(tree);
+                groupEntries = groupStore != null ? groupStore.getEntries(tree) : Collections.emptySet();
             }
             return groupEntries.iterator();
         }

@@ -50,7 +50,7 @@ public class PermissionEntryProviderImplTest {
     @Test
     public void testInitLongOverflow() throws Exception {
         MockPermissionStore store = new MockPermissionStore();
-        PermissionEntryCache cache = new MockPermissionEntryCache();
+        PermissionEntryCache cache = new MockPermissionEntryCache(store, ConfigurationParameters.EMPTY);
         Set<String> principalNames = ImmutableSet.of(GROUP_LONG_MAX);
 
         /*
@@ -76,7 +76,7 @@ public class PermissionEntryProviderImplTest {
     @Test
     public void testInitLongOverflow2() throws Exception {
         MockPermissionStore store = new MockPermissionStore();
-        PermissionEntryCache cache = new MockPermissionEntryCache();
+        PermissionEntryCache cache = new MockPermissionEntryCache(store, ConfigurationParameters.EMPTY);
         Set<String> principalNames = ImmutableSet.of(GROUP_LONG_MAX_MINUS_10, GROUP_50);
 
         /*
@@ -99,7 +99,7 @@ public class PermissionEntryProviderImplTest {
     @Test
     public void testExistingNamesAndLongOverFlow() throws Exception {
         MockPermissionStore store = new MockPermissionStore();
-        PermissionEntryCache cache = new MockPermissionEntryCache();
+        PermissionEntryCache cache = new MockPermissionEntryCache(store, ConfigurationParameters.EMPTY);
         Set<String> principalNames = Sets.newHashSet(GROUP_LONG_MAX_MINUS_10, GROUP_50, "noEntries");
 
         /*
@@ -119,7 +119,7 @@ public class PermissionEntryProviderImplTest {
     @Test
     public void testNoExistingName() throws Exception {
         MockPermissionStore store = new MockPermissionStore();
-        PermissionEntryCache cache = new MockPermissionEntryCache();
+        PermissionEntryCache cache = new MockPermissionEntryCache(store, ConfigurationParameters.EMPTY);
         Set<String> principalNames = Sets.newHashSet("noEntries", "noEntries2", "noEntries3");
 
         PermissionEntryProviderImpl provider = new PermissionEntryProviderImpl(store, cache, principalNames, ConfigurationParameters.EMPTY);
@@ -182,11 +182,16 @@ public class PermissionEntryProviderImplTest {
     }
 
     private class MockPermissionEntryCache extends PermissionEntryCache {
-        @Override
-        public void load(@Nonnull PermissionStore store,
-                @Nonnull Map<String, Collection<PermissionEntry>> pathEntryMap,
-                @Nonnull String principalName) {
-            fail("The number of  entries exceeds the max cache size");
+
+        MockPermissionEntryCache(PermissionStore store, ConfigurationParameters options) {
+            super(store, options);
+            // TODO Auto-generated constructor stub
         }
+//        @Override
+//        public void load(@Nonnull PermissionStore store,
+//                @Nonnull Map<String, Collection<PermissionEntry>> pathEntryMap,
+//                @Nonnull String principalName) {
+//            fail("The number of  entries exceeds the max cache size");
+//        }
     }
 }
