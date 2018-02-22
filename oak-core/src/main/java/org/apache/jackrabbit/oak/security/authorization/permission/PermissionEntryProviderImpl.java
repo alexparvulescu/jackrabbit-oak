@@ -57,10 +57,6 @@ class PermissionEntryProviderImpl implements PermissionEntryProvider {
         this.noop = principals == null;
     }
 
-    private String logName() {
-        return this.toString().replace("org.apache.jackrabbit.oak.security.authorization.permission.", "");
-    }
-
     //--------------------------------------------< PermissionEntryProvider >---
     @Override
     public void flush() {
@@ -92,7 +88,7 @@ class PermissionEntryProviderImpl implements PermissionEntryProvider {
     //------------------------------------------------------------< private >---
 
     @Nonnull
-    private Collection<PermissionEntry> getEntries(@Nonnull String path) {
+    private Collection<PermissionEntry> getEntriesByPath(@Nonnull String path) {
         if (noop) {
             return Collections.emptyList();
         } else {
@@ -128,7 +124,7 @@ class PermissionEntryProviderImpl implements PermissionEntryProvider {
                     if (path == null) {
                         break;
                     }
-                    nextEntries = getEntries(path).iterator();
+                    nextEntries = getEntriesByPath(path).iterator();
                     path = PermissionUtil.getParentPathOrNull(path);
                 }
             }
