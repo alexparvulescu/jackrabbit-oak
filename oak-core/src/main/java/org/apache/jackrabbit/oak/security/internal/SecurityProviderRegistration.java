@@ -70,6 +70,7 @@ import org.slf4j.LoggerFactory;
 import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Lists.newCopyOnWriteArrayList;
 import static org.apache.jackrabbit.oak.spi.security.RegistrationConstants.OAK_SECURITY_NAME;
+import static org.apache.jackrabbit.oak.spi.security.ConfigurationParameters.EMPTY;
 
 @Component(immediate=true)
 @Designate(ocd = SecurityProviderRegistration.Configuration.class)
@@ -290,7 +291,7 @@ public class SecurityProviderRegistration {
         unbindConfiguration(tokenConfiguration, configuration, properties);
     }
 
-    private void bindConfiguration(@Nonnull CompositeConfiguration composite, @Nonnull SecurityConfiguration configuration, Map<String, Object> properties) {
+    private <T extends SecurityConfiguration> void bindConfiguration(@Nonnull CompositeConfiguration<T> composite, @Nonnull T configuration, Map<String, Object> properties) {
         synchronized (this) {
             composite.addConfiguration(configuration, ConfigurationParameters.of(properties));
             addCandidate(properties);
@@ -298,7 +299,7 @@ public class SecurityProviderRegistration {
         maybeRegister();
     }
 
-    private void unbindConfiguration(@Nonnull CompositeConfiguration composite, @Nonnull SecurityConfiguration configuration, Map<String, Object> properties) {
+    private <T extends SecurityConfiguration> void unbindConfiguration(@Nonnull CompositeConfiguration<T> composite, @Nonnull T configuration, Map<String, Object> properties) {
         synchronized (this) {
             composite.removeConfiguration(configuration);
             removeCandidate(properties);
@@ -514,6 +515,22 @@ public class SecurityProviderRegistration {
     }
 
     private SecurityProvider createSecurityProvider(@Nonnull BundleContext context) {
+        ConfigurationParameters userParams = ConfigurationParameters.of(
+              ConfigurationParameters.of(UserConstants.PARAM_AUTHORIZABLE_ACTION_PROVIDER, createWhiteboardAuthorizableActionProvider()),
+              ConfigurationParameters.of(UserConstants.PARAM_AUTHORIZABLE_NODE_NAME, createWhiteboardAuthorizableNodeName()),
+              ConfigurationParameters.of(UserConstants.PARAM_USER_AUTHENTICATION_FACTORY, createWhiteboardUserAuthenticationFactory()));
+
+        ConfigurationParameters authorizationParams = ConfigurationParameters
+                .of(AccessControlConstants.PARAM_RESTRICTION_PROVIDER, createWhiteboardRestrictionProvider());
+
+        return SecurityProviderBuilder.newBuilder().withRootProvider(rootProvider).withTreeProvider(treeProvider)
+                .with(authenticationConfiguration, EMPTY, privilegeConfiguration, EMPTY, userConfiguration, userParams,
+                        authorizationConfiguration, authorizationParams, principalConfiguration, EMPTY,
+                        tokenConfiguration, EMPTY)
+                .withWhiteboard(new OsgiWhiteboard(context)).build();
+    }
+
+    private SecurityProvider createSecurityProviderOld(@Nonnull BundleContext context) {
         InternalSecurityProvider securityProvider = new InternalSecurityProvider();
 
         // Static, mandatory references
