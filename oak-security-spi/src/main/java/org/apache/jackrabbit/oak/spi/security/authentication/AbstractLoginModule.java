@@ -48,7 +48,6 @@ import org.apache.jackrabbit.oak.spi.security.authentication.callback.PrincipalP
 import org.apache.jackrabbit.oak.spi.security.authentication.callback.RepositoryCallback;
 import org.apache.jackrabbit.oak.spi.security.authentication.callback.UserManagerCallback;
 import org.apache.jackrabbit.oak.spi.security.authentication.callback.WhiteboardCallback;
-import org.apache.jackrabbit.oak.spi.security.principal.GroupPrincipals;
 import org.apache.jackrabbit.oak.spi.security.principal.PrincipalConfiguration;
 import org.apache.jackrabbit.oak.spi.security.principal.PrincipalProvider;
 import org.apache.jackrabbit.oak.spi.security.user.UserConfiguration;

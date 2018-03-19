@@ -18,6 +18,7 @@ package org.apache.jackrabbit.oak.spi.security.principal;
 
 import java.security.Principal;
 import java.security.acl.Group;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -25,7 +26,6 @@ import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -71,7 +71,7 @@ public class CompositePrincipalProvider implements PrincipalProvider {
     @Nonnull
     @Override
     public Set<Group> getGroupMembership(@Nonnull Principal principal) {
-        return ImmutableSet.of();
+        return Collections.emptySet();
     }
 
     @Nonnull
