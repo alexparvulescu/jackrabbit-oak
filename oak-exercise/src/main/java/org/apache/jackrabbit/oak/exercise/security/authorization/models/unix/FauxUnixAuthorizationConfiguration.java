@@ -193,7 +193,7 @@ public class FauxUnixAuthorizationConfiguration extends AbstractAuthorizationCon
         @Override
         public AccessControlPolicy[] getPolicies(String absPath)
                 throws PathNotFoundException, AccessDeniedException, RepositoryException {
-            UnixPolicy pol = getPolicy(absPath);
+            FauxUnixPolicy pol = getPolicy(absPath);
             if (pol != null) {
                 log.info("getPolicies({})=[{}]", absPath, pol);
                 return new AccessControlPolicy[] { pol };
@@ -203,11 +203,11 @@ public class FauxUnixAuthorizationConfiguration extends AbstractAuthorizationCon
         }
 
         @CheckForNull
-        private UnixPolicy getPolicy(@Nonnull String absPath) throws RepositoryException {
+        private FauxUnixPolicy getPolicy(@Nonnull String absPath) throws RepositoryException {
             String oakPath = getOakPath(absPath);
             if (oakPath != null) {
                 Tree t = getTree(oakPath, Permissions.NO_PERMISSION, false);
-                return new UnixPolicyImpl(t, getNamePathMapper(), principalManager);
+                return new FauxUnixPolicyImpl(t, getNamePathMapper(), principalManager);
             }
             return null;
         }
@@ -215,7 +215,7 @@ public class FauxUnixAuthorizationConfiguration extends AbstractAuthorizationCon
         @Override
         public AccessControlPolicy[] getEffectivePolicies(String absPath)
                 throws PathNotFoundException, AccessDeniedException, RepositoryException {
-            UnixPolicy pol = getPolicy(absPath);
+            FauxUnixPolicy pol = getPolicy(absPath);
             if (pol != null) {
                 log.info("getEffectivePolicies({})=[{}]", absPath, pol);
                 return new AccessControlPolicy[] { pol };
@@ -227,7 +227,7 @@ public class FauxUnixAuthorizationConfiguration extends AbstractAuthorizationCon
         @Override
         public AccessControlPolicyIterator getApplicablePolicies(String absPath)
                 throws PathNotFoundException, AccessDeniedException, RepositoryException {
-            UnixPolicy pol = getPolicy(absPath);
+            FauxUnixPolicy pol = getPolicy(absPath);
             if (pol != null) {
                 log.info("getApplicablePolicies({})=<{}>", absPath, pol);
                 return new AccessControlPolicyIteratorAdapter(Collections.singleton(pol));
@@ -251,14 +251,14 @@ public class FauxUnixAuthorizationConfiguration extends AbstractAuthorizationCon
 
         @Override
         public boolean defines(String absPath, AccessControlPolicy acp) {
-            return acp instanceof UnixPolicy;
+            return acp instanceof FauxUnixPolicy;
         }
     }
 
-    private static interface UnixPolicy extends PrincipalSetPolicy, JackrabbitAccessControlPolicy {
+    private static interface FauxUnixPolicy extends PrincipalSetPolicy, JackrabbitAccessControlPolicy {
     }
 
-    private static class UnixPolicyImpl implements UnixPolicy {
+    private static class FauxUnixPolicyImpl implements FauxUnixPolicy {
 
         private final String oakPath;
 
@@ -268,7 +268,7 @@ public class FauxUnixAuthorizationConfiguration extends AbstractAuthorizationCon
 
         private final PrincipalManager principalManager;
 
-        public UnixPolicyImpl(@Nonnull Tree tree, @Nonnull NamePathMapper namePathMapper,
+        public FauxUnixPolicyImpl(@Nonnull Tree tree, @Nonnull NamePathMapper namePathMapper,
                 PrincipalManager principalManager) {
             this.oakPath = tree.getPath();
             this.namePathMapper = namePathMapper;
@@ -504,9 +504,11 @@ public class FauxUnixAuthorizationConfiguration extends AbstractAuthorizationCon
 
         private boolean isAllow(boolean read) {
             // open certain paths up for 'read' access by default
-            for (String p : PermissionConstants.DEFAULT_READ_PATHS) {
-                if (PathUtils.isAncestor(p, tree.getPath())) {
-                    return true;
+            if (read) {
+                for (String p : PermissionConstants.DEFAULT_READ_PATHS) {
+                    if (PathUtils.isAncestor(p, tree.getPath())) {
+                        return true;
+                    }
                 }
             }
 
