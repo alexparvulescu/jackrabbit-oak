@@ -64,7 +64,6 @@ import org.apache.jackrabbit.oak.plugins.tree.RootProvider;
 import org.apache.jackrabbit.oak.plugins.tree.TreeLocation;
 import org.apache.jackrabbit.oak.plugins.tree.TreeType;
 import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
-import org.apache.jackrabbit.oak.security.authorization.permission.PermissionValidatorProvider;
 import org.apache.jackrabbit.oak.spi.commit.CommitHook;
 import org.apache.jackrabbit.oak.spi.commit.CommitInfo;
 import org.apache.jackrabbit.oak.spi.commit.CompositeEditorProvider;
@@ -150,10 +149,12 @@ public class FauxUnixAuthorizationConfiguration extends ConfigurationBase implem
             @Nonnull Set<Principal> principals, @Nonnull MoveTracker moveTracker) {
 
         // TODO reverify
-        PermissionValidatorProvider pvp = new PermissionValidatorProvider(getSecurityProvider(), workspaceName,
-                principals, moveTracker, getRootProvider(), getTreeProvider());
-
-        return Collections.singletonList(pvp);
+        // TODO PermissionValidatorProvider is part of a package in oak-core
+        // that is not OSGi exported
+        //PermissionValidatorProvider pvp = new PermissionValidatorProvider(getSecurityProvider(), workspaceName,
+        //        principals, moveTracker, getRootProvider(), getTreeProvider());
+        // return Collections.singletonList(pvp);
+        return Collections.emptyList();
     }
 
     @Nonnull
