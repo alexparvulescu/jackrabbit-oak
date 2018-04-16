@@ -26,10 +26,12 @@ import static org.apache.jackrabbit.oak.commons.PathUtils.isAncestor;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.Nonnull;
 import javax.security.auth.Subject;
@@ -245,8 +247,8 @@ class MutableRoot implements Root {
     public void commit(@Nonnull Map<String, Object> info) throws CommitFailedException {
         checkLive();
         ContentSession session = getContentSession();
-        CommitInfo commitInfo = new CommitInfo(
-                session.toString(), session.getAuthInfo().getUserID(), newInfoWithCommitContext(info));
+        CommitInfo commitInfo = new CommitInfo(session.toString(), session.getAuthInfo().getUserID(),
+                newInfoWithCommitContext(info, session.getAuthInfo().getPrincipals()));
         store.merge(builder, getCommitHook(), commitInfo);
         secureBuilder.baseChanged();
         modCount = 0;
@@ -366,10 +368,11 @@ class MutableRoot implements Root {
         return securityProvider.getConfiguration(AuthorizationConfiguration.class);
     }
 
-    private static Map<String, Object> newInfoWithCommitContext(Map<String, Object> info){
+    private static Map<String, Object> newInfoWithCommitContext(Map<String, Object> info, Set<Principal> principals) {
         return ImmutableMap.<String, Object>builder()
                 .putAll(info)
                 .put(CommitContext.NAME, new SimpleCommitContext())
+                .put("SESSION_PRINCIPALS", principals)
                 .build();
     }
 

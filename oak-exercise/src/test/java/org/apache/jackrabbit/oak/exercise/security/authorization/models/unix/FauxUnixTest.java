@@ -19,33 +19,41 @@ package org.apache.jackrabbit.oak.exercise.security.authorization.models.unix;
 import static org.apache.jackrabbit.JcrConstants.JCR_MIXINTYPES;
 import static org.apache.jackrabbit.JcrConstants.JCR_PRIMARYTYPE;
 import static org.apache.jackrabbit.oak.api.Type.NAME;
+import static org.apache.jackrabbit.oak.exercise.security.authorization.models.unix.FauxUnixAuthorizationHelper.chmod;
+import static org.apache.jackrabbit.oak.exercise.security.authorization.models.unix.FauxUnixAuthorizationHelper.chown;
 import static org.apache.jackrabbit.oak.plugins.tree.TreeUtil.getString;
 import static org.apache.jackrabbit.oak.plugins.tree.TreeUtil.getStrings;
 import static org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants.NT_OAK_UNSTRUCTURED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import java.util.List;
 import java.util.UUID;
 
 import javax.jcr.SimpleCredentials;
 
 import org.apache.jackrabbit.api.security.user.User;
 import org.apache.jackrabbit.oak.AbstractSecurityTest;
+import org.apache.jackrabbit.oak.api.CommitFailedException;
 import org.apache.jackrabbit.oak.api.ContentSession;
 import org.apache.jackrabbit.oak.api.Root;
 import org.apache.jackrabbit.oak.api.Tree;
-import org.apache.jackrabbit.oak.api.Type;
-import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
+import org.apache.jackrabbit.oak.exercise.security.authorization.models.unix.FauxUnixAuthorizationConfiguration.FauxUnixPolicy;
 import org.apache.jackrabbit.oak.security.authorization.composite.CompositeAuthorizationConfiguration;
+import org.apache.jackrabbit.oak.security.user.UserConfigurationImpl;
+import org.apache.jackrabbit.oak.spi.security.ConfigurationParameters;
 import org.apache.jackrabbit.oak.spi.security.SecurityProvider;
 import org.apache.jackrabbit.oak.spi.security.authorization.AuthorizationConfiguration;
-import org.junit.Ignore;
+import org.apache.jackrabbit.oak.spi.security.user.AuthorizableNodeName;
+import org.apache.jackrabbit.oak.spi.security.user.UserAuthenticationFactory;
+import org.apache.jackrabbit.oak.spi.security.user.UserConfiguration;
+import org.apache.jackrabbit.oak.spi.security.user.UserConstants;
+import org.apache.jackrabbit.oak.spi.security.user.action.AuthorizableActionProvider;
 import org.junit.Test;
 
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 
 public class FauxUnixTest extends AbstractSecurityTest {
 
@@ -56,6 +64,20 @@ public class FauxUnixTest extends AbstractSecurityTest {
     private ContentSession s1;
 
     private ContentSession s2;
+
+    protected ConfigurationParameters getSecurityConfigParameters() {
+        AuthorizableActionProvider authorizableActionProvider = new FauxUnixAuthorizableActionProvider();
+        AuthorizableNodeName authorizableNodeName = AuthorizableNodeName.DEFAULT;
+        UserAuthenticationFactory userAuthenticationFactory = UserConfigurationImpl.getDefaultAuthenticationFactory();
+
+        ConfigurationParameters userParams = ConfigurationParameters.of(
+                ConfigurationParameters.of(UserConstants.PARAM_AUTHORIZABLE_ACTION_PROVIDER,
+                        authorizableActionProvider),
+                ConfigurationParameters.of(UserConstants.PARAM_AUTHORIZABLE_NODE_NAME, authorizableNodeName),
+                ConfigurationParameters.of(UserConstants.PARAM_USER_AUTHENTICATION_FACTORY, userAuthenticationFactory));
+
+        return ConfigurationParameters.of(UserConfiguration.NAME, userParams);
+    }
 
     @Override
     protected SecurityProvider initSecurityProvider() {
@@ -82,6 +104,10 @@ public class FauxUnixTest extends AbstractSecurityTest {
         s1 = login(new SimpleCredentials(u1.getID(), u1.getID().toCharArray()));
         s2 = login(new SimpleCredentials(u2.getID(), u2.getID().toCharArray()));
 
+        // check user can read its own path
+        assertTrue(s1.getLatestRoot().getTree(u1.getPath()).exists());
+        assertTrue(s2.getLatestRoot().getTree(u2.getPath()).exists());
+
         // bootstap content
         Tree a = root.getTree("/").addChild("a");
         a.setProperty(JCR_PRIMARYTYPE, NT_OAK_UNSTRUCTURED, NAME);
@@ -90,7 +116,7 @@ public class FauxUnixTest extends AbstractSecurityTest {
 
         // change owner of /a to s1
         String p1 = s1.getAuthInfo().getUserID();
-        chown(a, p1);
+        chown("/a", p1, getAccessControlManager(root));
         root.commit();
 
         Root r1 = s1.getLatestRoot();
@@ -138,6 +164,18 @@ public class FauxUnixTest extends AbstractSecurityTest {
     }
 
     @Test
+    public void testPolicies() throws Exception {
+        FauxUnixPolicy fup = FauxUnixAuthorizationHelper.getPolicy("/a", getAccessControlManager(root));
+        assertEquals(s1.getAuthInfo().getUserID(), fup.getOwner());
+
+        FauxUnixPolicy fup1 = FauxUnixAuthorizationHelper.getPolicy("/a", getAccessControlManager(s1.getLatestRoot()));
+        assertNotNull(fup1);
+
+        FauxUnixPolicy fup2 = FauxUnixAuthorizationHelper.getPolicy("/a", getAccessControlManager(s2.getLatestRoot()));
+        assertNull(fup2);
+    }
+
+    @Test
     public void testExists() throws Exception {
         Root r1 = s1.getLatestRoot();
         assertFalse(r1.getTree("/").exists());
@@ -163,16 +201,38 @@ public class FauxUnixTest extends AbstractSecurityTest {
         assertFalse(r2.getTree("/a/b").exists());
         assertFalse(r2.getTree("/a/b/c").exists());
 
-        root.refresh();
-
         // chown
         String p2 = s2.getAuthInfo().getUserID();
-        root.refresh();
-        chown(root.getTree("/a/b"), p2);
-        root.commit();
+        r1 = s1.getLatestRoot();
+        chown("/a/b", p2, getAccessControlManager(r1));
+        r1.commit();
 
         r1 = s1.getLatestRoot();
         assertFalse(r1.getTree("/a/b").exists());
+        assertTrue(r1.getTree("/a/b/c").exists());
+
+        r2 = s2.getLatestRoot();
+        assertTrue(r2.getTree("/a/b").exists());
+        assertFalse(r2.getTree("/a/b/c").exists());
+    }
+
+    @Test
+    public void testChmod() throws Exception {
+        Root r1 = s1.getLatestRoot();
+        assertTrue(r1.getTree("/a/b").exists());
+        assertTrue(r1.getTree("/a/b/c").exists());
+
+        Root r2 = s2.getLatestRoot();
+        assertFalse(r2.getTree("/a/b").exists());
+        assertFalse(r2.getTree("/a/b/c").exists());
+
+        // allow 'other' read access
+        r1 = s1.getLatestRoot();
+        chmod("/a/b", "o=r--", getAccessControlManager(r1));
+        r1.commit();
+
+        r1 = s1.getLatestRoot();
+        assertTrue(r1.getTree("/a/b").exists());
         assertTrue(r1.getTree("/a/b/c").exists());
 
         r2 = s2.getLatestRoot();
@@ -194,29 +254,29 @@ public class FauxUnixTest extends AbstractSecurityTest {
         r1.commit();
     }
 
-    @Ignore
-    @Test
+    @Test(expected = CommitFailedException.class)
     public void testCreateUserNonAdmin() throws Exception {
 
         // unix only allows admin user to perform admin tasks
-
-        Root r1 = s1.getLatestRoot();
         String p1 = s1.getAuthInfo().getUserID();
 
-        // to be able to create a user:
+        // try to create a user with a non-admin session:
         //
         // 1st error:
+        // need to allow write access to user root + intermediate paths (if any)
+        //
         // javax.jcr.AccessDeniedException: Missing permission to create
         // intermediate authorizable folders.
         // org.apache.jackrabbit.oak.security.user.UserProvider.createFolderNodes(UserProvider.java:307)
         // org.apache.jackrabbit.oak.security.user.UserProvider.createAuthorizableNode(UserProvider.java:255)
         // org.apache.jackrabbit.oak.security.user.UserProvider.createUser(UserProvider.java:183)
         root.refresh();
-
-        // need to allow write access to user root + intermediate paths (if any)
-        chown(root.getTree("/rep:security/rep:authorizables/rep:users"), p1);
+        chown("/rep:security/rep:authorizables/rep:users", p1, getAccessControlManager(root));
 
         // 2nd error
+        // node type tree is not readable - fixed it in the default model to
+        // open certain paths to be readable by anyone
+        //
         // javax.jcr.nodetype.NoSuchNodeTypeException: Node type rep:User does
         // not exist
         // org.apache.jackrabbit.oak.plugins.tree.TreeUtil.addChild(TreeUtil.java:210)
@@ -224,7 +284,6 @@ public class FauxUnixTest extends AbstractSecurityTest {
         // org.apache.jackrabbit.oak.security.user.UserProvider.createUser(UserProvider.java:183)
 
         // 3rd error
-        // ->
         // isGranted(/rep:security/rep:authorizables/rep:users/x/xy/xyzUser%7Cf90ada90-cc62-498b-bc96-61d67d1e6079,
         // [USER_MANAGEMENT])=false
         //
@@ -232,20 +291,12 @@ public class FauxUnixTest extends AbstractSecurityTest {
         // Access
         // denied(/rep:security/rep:authorizables/rep:users/x/xy/xyzUser%7C87b1b08e-f0d6-4096-ae92-ef594465c71c)
         // org.apache.jackrabbit.oak.security.authorization.permission.PermissionValidator.checkPermissions(PermissionValidator.java:210)
-
         root.commit();
+
+        Root r1 = s1.getLatestRoot();
         r1.refresh();
         String uid = "xyzUser|" + UUID.randomUUID();
         getUserManager(r1).createUser(uid, uid);
         r1.commit();
-    }
-
-    private static void chown(Tree t, String userId) {
-        t.setProperty(FauxUnixAuthorizationConfiguration.REP_USER, userId);
-        t.setProperty(FauxUnixAuthorizationConfiguration.REP_PERMISSIONS,
-                FauxUnixAuthorizationConfiguration.DEFAULT_PERMISSIONS);
-        List<String> mixins = Lists.newArrayList(TreeUtil.getNames(t, JCR_MIXINTYPES));
-        mixins.add(FauxUnixAuthorizationConfiguration.MIX_REP_FAUX_UNIX);
-        t.setProperty(JCR_MIXINTYPES, mixins, Type.NAMES);
     }
 }
