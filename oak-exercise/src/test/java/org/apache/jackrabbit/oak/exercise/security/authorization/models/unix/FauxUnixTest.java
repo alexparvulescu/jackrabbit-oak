@@ -40,17 +40,21 @@ import org.apache.jackrabbit.oak.api.CommitFailedException;
 import org.apache.jackrabbit.oak.api.ContentSession;
 import org.apache.jackrabbit.oak.api.Root;
 import org.apache.jackrabbit.oak.api.Tree;
-import org.apache.jackrabbit.oak.exercise.security.authorization.models.unix.FauxUnixAuthorizationConfiguration.FauxUnixPolicy;
+import org.apache.jackrabbit.oak.exercise.security.authorization.models.unix.FauxUnixSimplePolicies.FauxUnixPolicy;
 import org.apache.jackrabbit.oak.security.authorization.composite.CompositeAuthorizationConfiguration;
 import org.apache.jackrabbit.oak.security.user.UserConfigurationImpl;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationParameters;
 import org.apache.jackrabbit.oak.spi.security.SecurityProvider;
 import org.apache.jackrabbit.oak.spi.security.authorization.AuthorizationConfiguration;
+import org.apache.jackrabbit.oak.spi.security.authorization.permission.AggregatedPermissionProvider;
+import org.apache.jackrabbit.oak.spi.security.authorization.permission.PermissionProvider;
+import org.apache.jackrabbit.oak.spi.security.authorization.permission.Permissions;
 import org.apache.jackrabbit.oak.spi.security.user.AuthorizableNodeName;
 import org.apache.jackrabbit.oak.spi.security.user.UserAuthenticationFactory;
 import org.apache.jackrabbit.oak.spi.security.user.UserConfiguration;
 import org.apache.jackrabbit.oak.spi.security.user.UserConstants;
 import org.apache.jackrabbit.oak.spi.security.user.action.AuthorizableActionProvider;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.google.common.collect.Iterables;
@@ -116,7 +120,7 @@ public class FauxUnixTest extends AbstractSecurityTest {
 
         // change owner of /a to s1
         String p1 = s1.getAuthInfo().getUserID();
-        chown("/a", p1, getAccessControlManager(root));
+        assertTrue(chown("/a", p1, getAccessControlManager(root)));
         root.commit();
 
         Root r1 = s1.getLatestRoot();
@@ -192,6 +196,21 @@ public class FauxUnixTest extends AbstractSecurityTest {
     }
 
     @Test
+    public void testSupported() throws Exception {
+        Root r1 = s1.getLatestRoot();
+        PermissionProvider p1 = getConfig(AuthorizationConfiguration.class).getPermissionProvider(r1, "",
+                s1.getAuthInfo().getPrincipals());
+        assertTrue(p1 instanceof AggregatedPermissionProvider);
+        AggregatedPermissionProvider fp1 = (AggregatedPermissionProvider) p1;
+
+        long s0 = fp1.supportedPermissions((Tree) null, null, Permissions.NODE_TYPE_MANAGEMENT);
+        assertEquals(Permissions.NODE_TYPE_MANAGEMENT, s0);
+
+        assertTrue(fp1.isGranted(r1.getTree("/a"), null, Permissions.WRITE));
+        assertTrue(fp1.isGranted(r1.getTree("/a"), null, Permissions.NODE_TYPE_MANAGEMENT));
+    }
+
+    @Test
     public void testChown() throws Exception {
         Root r1 = s1.getLatestRoot();
         assertTrue(r1.getTree("/a/b").exists());
@@ -254,6 +273,7 @@ public class FauxUnixTest extends AbstractSecurityTest {
         r1.commit();
     }
 
+    @Ignore
     @Test(expected = CommitFailedException.class)
     public void testCreateUserNonAdmin() throws Exception {
 

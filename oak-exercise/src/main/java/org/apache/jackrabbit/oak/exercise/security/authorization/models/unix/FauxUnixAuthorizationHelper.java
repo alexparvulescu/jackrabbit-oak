@@ -16,6 +16,10 @@
  */
 package org.apache.jackrabbit.oak.exercise.security.authorization.models.unix;
 
+import static org.apache.jackrabbit.oak.spi.security.privilege.PrivilegeConstants.JCR_NODE_TYPE_MANAGEMENT;
+import static org.apache.jackrabbit.oak.spi.security.privilege.PrivilegeConstants.JCR_READ;
+import static org.apache.jackrabbit.oak.spi.security.privilege.PrivilegeConstants.JCR_WRITE;
+
 import java.security.Principal;
 import java.util.Collections;
 import java.util.HashSet;
@@ -24,12 +28,18 @@ import java.util.Set;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.jcr.RepositoryException;
+import javax.jcr.security.AccessControlEntry;
 import javax.jcr.security.AccessControlManager;
 import javax.jcr.security.AccessControlPolicy;
+import javax.jcr.security.Privilege;
 
+import org.apache.jackrabbit.api.security.authorization.PrivilegeManager;
+import org.apache.jackrabbit.oak.api.PropertyState;
 import org.apache.jackrabbit.oak.api.Tree;
-import org.apache.jackrabbit.oak.exercise.security.authorization.models.unix.FauxUnixAuthorizationConfiguration.FauxUnixPolicy;
-import org.apache.jackrabbit.oak.exercise.security.authorization.models.unix.FauxUnixAuthorizationConfiguration.FauxUnixPolicyImpl;
+import org.apache.jackrabbit.oak.exercise.security.authorization.models.unix.FauxUnixACLs.FauxUnixACL;
+import org.apache.jackrabbit.oak.exercise.security.authorization.models.unix.FauxUnixACLs.OwnerACE;
+import org.apache.jackrabbit.oak.exercise.security.authorization.models.unix.FauxUnixSimplePolicies.FauxUnixPolicy;
+import org.apache.jackrabbit.oak.exercise.security.authorization.models.unix.FauxUnixSimplePolicies.FauxUnixPolicyImpl;
 import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
 import org.apache.jackrabbit.oak.spi.security.principal.AdminPrincipal;
 import org.apache.jackrabbit.oak.spi.security.principal.SystemPrincipal;
@@ -52,10 +62,29 @@ public class FauxUnixAuthorizationHelper {
         if (eff.length == 0) {
             return false;
         }
-        FauxUnixPolicyImpl fup = (FauxUnixPolicyImpl) eff[0];
-        fup.setOwner(owner);
-        acm.setPolicy(path, fup);
-        return true;
+
+        if (eff[0] instanceof FauxUnixPolicy) {
+            FauxUnixPolicyImpl fup = (FauxUnixPolicyImpl) eff[0];
+            fup.setOwner(owner);
+            acm.setPolicy(path, fup);
+            return true;
+        } else {
+            FauxUnixACL acl = (FauxUnixACL) eff[0];
+            boolean changed = false;
+            for (AccessControlEntry ace : acl.getAccessControlEntries()) {
+                if (ace instanceof OwnerACE) {
+                    OwnerACE ownerAce = (OwnerACE) ace;
+                    ownerAce.setPrincipal(owner);
+                    changed = true;
+                    break;
+                }
+            }
+            if (changed) {
+                acm.setPolicy(path, acl);
+                return true;
+            }
+            return false;
+        }
     }
 
     public static boolean chgrp(@Nonnull String path, @Nonnull Set<String> group, @Nonnull AccessControlManager acm)
@@ -114,6 +143,39 @@ public class FauxUnixAuthorizationHelper {
             return Collections.emptySet();
         } else {
             return Sets.newHashSet(g);
+        }
+    }
+
+    public static String getPath(Tree tree) {
+        if (tree != null) {
+            return tree.getPath();
+        } else {
+            return "";
+        }
+    }
+
+    public static String getPropertyName(PropertyState ps) {
+        if (ps != null) {
+            return ps.getName();
+        } else {
+            return "";
+        }
+    }
+
+    public static Privilege[] privileges(String permissions, int index, PrivilegeManager privilegeManager)
+            throws RepositoryException {
+        boolean isRead = permissions.charAt(index) == 'r';
+        boolean isWrite = permissions.charAt(index + 1) == 'w';
+        if (isRead && isWrite) {
+            return new Privilege[] { privilegeManager.getPrivilege(JCR_READ), privilegeManager.getPrivilege(JCR_WRITE),
+                    privilegeManager.getPrivilege(JCR_NODE_TYPE_MANAGEMENT) };
+        } else if (isRead) {
+            return new Privilege[] { privilegeManager.getPrivilege(JCR_READ) };
+        } else if (isWrite) {
+            return new Privilege[] { privilegeManager.getPrivilege(JCR_WRITE),
+                    privilegeManager.getPrivilege(JCR_NODE_TYPE_MANAGEMENT) };
+        } else {
+            return new Privilege[] {};
         }
     }
 }

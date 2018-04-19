@@ -5,7 +5,11 @@ import static org.apache.jackrabbit.oak.api.Type.NAME;
 import static org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants.NT_OAK_UNSTRUCTURED;
 
 import java.io.Console;
+import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.List;
 import java.util.Set;
 
 import javax.jcr.GuestCredentials;
@@ -30,8 +34,8 @@ import org.apache.jackrabbit.oak.api.Type;
 import org.apache.jackrabbit.oak.commons.PathUtils;
 import org.apache.jackrabbit.oak.exercise.security.authorization.models.unix.FauxUnixAuthorizableActionProvider;
 import org.apache.jackrabbit.oak.exercise.security.authorization.models.unix.FauxUnixAuthorizationConfiguration;
-import org.apache.jackrabbit.oak.exercise.security.authorization.models.unix.FauxUnixAuthorizationConfiguration.FauxUnixPolicy;
 import org.apache.jackrabbit.oak.exercise.security.authorization.models.unix.FauxUnixAuthorizationHelper;
+import org.apache.jackrabbit.oak.exercise.security.authorization.models.unix.FauxUnixSimplePolicies.FauxUnixPolicy;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
 import org.apache.jackrabbit.oak.plugins.commit.ConflictValidatorProvider;
 import org.apache.jackrabbit.oak.plugins.commit.JcrConflictHandler;
@@ -258,6 +262,9 @@ public class Main {
         if (h == null || h.equals("print")) {
             w.println("    print [path]     -- print path info");
         }
+        if (h == null || h.equals(":load")) {
+            w.println("    :load file     -- executes commands in file");
+        }
         w.println();
     }
 
@@ -268,7 +275,14 @@ public class Main {
         } else {
             u = getAdminId();
         }
-        char[] pass = console.readPassword("Password: ");
+
+        char[] pass;
+        if (tkn.length == 3) {
+            // non-interactive mode
+            pass = tkn[2].toCharArray();
+        } else {
+            pass = console.readPassword("Password: ");
+        }
         try {
             session = contentRepository.login(new SimpleCredentials(u, pass), null);
         } catch (LoginException | NoSuchWorkspaceException e) {
@@ -345,7 +359,13 @@ public class Main {
         }
 
         String u = tkn[1];
-        char[] pass = console.readPassword("[" + u + "]: ");
+        char[] pass;
+        if (tkn.length == 3) {
+            // non-interactive mode
+            pass = tkn[2].toCharArray();
+        } else {
+            pass = console.readPassword("[" + u + "]: ");
+        }
         Root root = session.getLatestRoot();
         try {
             getUserManager(root).createUser(u, String.valueOf(pass));
@@ -380,7 +400,6 @@ public class Main {
     }
 
     private void doUserMod(String[] tkn) {
-        // TODO
         if (tkn.length < 3) {
             console.writer().println("usage: usermod group user");
             return;
@@ -414,7 +433,6 @@ public class Main {
     }
 
     private void doGroups(String[] tkn) {
-        // TODO
         if (tkn.length < 2) {
             console.writer().println("usage: groups user");
             return;
@@ -607,6 +625,28 @@ public class Main {
         }
     }
 
+    private void doLoad(String[] tkn) {
+        if (tkn.length <= 1) {
+            console.writer().println("usage: :load path");
+            return;
+        }
+        String path = tkn[1];
+        List<String> commands;
+        try {
+            commands = Files.readAllLines(Paths.get(path));
+        } catch (IOException e) {
+            console.writer().println("Err: " + e.getMessage());
+            return;
+        }
+        for (String c : commands) {
+            if (c.startsWith("#")) {
+                continue;
+            }
+            String[] tkn2 = c.trim().split(" ");
+            runIt(tkn2);
+        }
+    }
+
     private void repl() {
         PrintWriter w = console.writer();
         w.println("..............................................");
@@ -708,6 +748,10 @@ public class Main {
 
         case "print":
             doPrintProperties(tkn);
+            break;
+
+        case ":load":
+            doLoad(tkn);
             break;
 
         default:

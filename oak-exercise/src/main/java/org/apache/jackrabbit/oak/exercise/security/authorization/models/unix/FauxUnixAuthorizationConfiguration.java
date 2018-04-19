@@ -17,6 +17,10 @@
 package org.apache.jackrabbit.oak.exercise.security.authorization.models.unix;
 
 import static org.apache.jackrabbit.JcrConstants.JCR_MIXINTYPES;
+import static org.apache.jackrabbit.oak.exercise.security.authorization.models.unix.FauxUnixAuthorizationHelper.asNames;
+import static org.apache.jackrabbit.oak.exercise.security.authorization.models.unix.FauxUnixAuthorizationHelper.getGroupsOrEmpty;
+import static org.apache.jackrabbit.oak.exercise.security.authorization.models.unix.FauxUnixAuthorizationHelper.getPath;
+import static org.apache.jackrabbit.oak.exercise.security.authorization.models.unix.FauxUnixAuthorizationHelper.getPropertyName;
 import static org.apache.jackrabbit.oak.exercise.security.authorization.models.unix.FauxUnixAuthorizationHelper.isAdmin;
 import static org.apache.jackrabbit.oak.spi.security.RegistrationConstants.OAK_SECURITY_NAME;
 
@@ -29,24 +33,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.jcr.AccessDeniedException;
-import javax.jcr.PathNotFoundException;
 import javax.jcr.RepositoryException;
-import javax.jcr.UnsupportedRepositoryOperationException;
-import javax.jcr.lock.LockException;
-import javax.jcr.security.AccessControlException;
 import javax.jcr.security.AccessControlManager;
-import javax.jcr.security.AccessControlPolicy;
-import javax.jcr.security.AccessControlPolicyIterator;
-import javax.jcr.security.Privilege;
-import javax.jcr.version.VersionException;
 
-import org.apache.jackrabbit.api.security.JackrabbitAccessControlPolicy;
-import org.apache.jackrabbit.commons.iterator.AccessControlPolicyIteratorAdapter;
-import org.apache.jackrabbit.oak.api.AuthInfo;
 import org.apache.jackrabbit.oak.api.CommitFailedException;
 import org.apache.jackrabbit.oak.api.PropertyState;
 import org.apache.jackrabbit.oak.api.Root;
@@ -76,10 +67,7 @@ import org.apache.jackrabbit.oak.spi.lifecycle.RepositoryInitializer;
 import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationBase;
 import org.apache.jackrabbit.oak.spi.security.SecurityConfiguration;
-import org.apache.jackrabbit.oak.spi.security.SecurityProvider;
 import org.apache.jackrabbit.oak.spi.security.authorization.AuthorizationConfiguration;
-import org.apache.jackrabbit.oak.spi.security.authorization.accesscontrol.AbstractAccessControlManager;
-import org.apache.jackrabbit.oak.spi.security.authorization.accesscontrol.PolicyOwner;
 import org.apache.jackrabbit.oak.spi.security.authorization.permission.AggregatedPermissionProvider;
 import org.apache.jackrabbit.oak.spi.security.authorization.permission.OpenPermissionProvider;
 import org.apache.jackrabbit.oak.spi.security.authorization.permission.PermissionConstants;
@@ -89,7 +77,6 @@ import org.apache.jackrabbit.oak.spi.security.authorization.permission.Repositor
 import org.apache.jackrabbit.oak.spi.security.authorization.permission.TreePermission;
 import org.apache.jackrabbit.oak.spi.security.authorization.restriction.RestrictionProvider;
 import org.apache.jackrabbit.oak.spi.security.privilege.PrivilegeBits;
-import org.apache.jackrabbit.oak.spi.security.privilege.PrivilegeConstants;
 import org.apache.jackrabbit.oak.spi.security.user.UserConfiguration;
 import org.apache.jackrabbit.oak.spi.security.user.util.UserUtil;
 import org.apache.jackrabbit.oak.spi.state.ApplyDiff;
@@ -114,7 +101,6 @@ public class FauxUnixAuthorizationConfiguration extends ConfigurationBase implem
 
     // TODO
     // - group info is unavailable in hook
-    // - group policies not implemented
     //
     // - what kind of rights do I need to run chmod?
     // - does chown check if the new owner exists?
@@ -122,6 +108,18 @@ public class FauxUnixAuthorizationConfiguration extends ConfigurationBase implem
     // - implement validator to protect internal properties
     //
     // - bootstrapping problem with initial content: user info is 'null'
+    //
+    // - all sling code works with "JackrabbitAccessControlList" so this might
+    // need to be reflected in this model as well
+    //
+    // permissions:
+    // NODE_TYPE_MANAGEMENT is needed whenever a user adds a new typed node
+    //
+    // SecurityProviderRegistration should only bind to configs that are listed
+    // as required and ignore everything else
+
+    // - any set policy should bubble down to all child nodes for sling to work
+    // as before
 
     public static String MIX_REP_FAUX_UNIX = "rep:FauxUnixMixin";
     static final String REP_USER = "rep:user";
@@ -130,9 +128,15 @@ public class FauxUnixAuthorizationConfiguration extends ConfigurationBase implem
 
     static final String DEFAULT_PERMISSIONS = "-rw-r-----";
 
+    private static boolean USE_ACL_MODEL = Boolean.getBoolean("useACLModel");
+
     @Override
     public AccessControlManager getAccessControlManager(Root root, NamePathMapper namePathMapper) {
-        return new FauxUnixAccessControlManager(root, namePathMapper, getSecurityProvider());
+        if (USE_ACL_MODEL) {
+            return FauxUnixACLs.getAccessControlManager(root, namePathMapper, getSecurityProvider());
+        } else {
+            return FauxUnixSimplePolicies.getAccessControlManager(root, namePathMapper, getSecurityProvider());
+        }
     }
 
     @Override
@@ -151,8 +155,9 @@ public class FauxUnixAuthorizationConfiguration extends ConfigurationBase implem
         // TODO reverify
         // TODO PermissionValidatorProvider is part of a package in oak-core
         // that is not OSGi exported
-        //PermissionValidatorProvider pvp = new PermissionValidatorProvider(getSecurityProvider(), workspaceName,
-        //        principals, moveTracker, getRootProvider(), getTreeProvider());
+        // PermissionValidatorProvider pvp = new
+        // PermissionValidatorProvider(getSecurityProvider(), workspaceName,
+        // principals, moveTracker, getRootProvider(), getTreeProvider());
         // return Collections.singletonList(pvp);
         return Collections.emptyList();
     }
@@ -179,248 +184,6 @@ public class FauxUnixAuthorizationConfiguration extends ConfigurationBase implem
         return RestrictionProvider.EMPTY;
     }
 
-    private static class FauxUnixAccessControlManager extends AbstractAccessControlManager implements PolicyOwner {
-
-        private static final Logger log = LoggerFactory.getLogger(FauxUnixAccessControlManager.class);
-
-        protected FauxUnixAccessControlManager(Root root, NamePathMapper namePathMapper,
-                SecurityProvider securityProvider) {
-            super(root, namePathMapper, securityProvider);
-        }
-
-        @Nonnull
-        @Override
-        public Privilege[] getSupportedPrivileges(@Nullable String absPath) throws RepositoryException {
-            return new Privilege[] { privilegeFromName(PrivilegeConstants.JCR_READ),
-                    privilegeFromName(PrivilegeConstants.JCR_WRITE) };
-        }
-
-        @Override
-        public JackrabbitAccessControlPolicy[] getApplicablePolicies(Principal principal) throws AccessDeniedException,
-                AccessControlException, UnsupportedRepositoryOperationException, RepositoryException {
-            // editing by 'principal' is not supported
-            log.info("getApplicablePolicies({})=<empty>", principal);
-            return new JackrabbitAccessControlPolicy[0];
-        }
-
-        @Override
-        public JackrabbitAccessControlPolicy[] getPolicies(Principal principal) throws AccessDeniedException,
-                AccessControlException, UnsupportedRepositoryOperationException, RepositoryException {
-            // editing by 'principal' is not supported
-            log.info("getPolicies({})=<empty>", principal);
-            return new JackrabbitAccessControlPolicy[0];
-        }
-
-        @Override
-        public AccessControlPolicy[] getEffectivePolicies(Set<Principal> principals) throws AccessDeniedException,
-                AccessControlException, UnsupportedRepositoryOperationException, RepositoryException {
-            // editing by 'principal' is not supported
-            log.info("getEffectivePolicies({})=<empty>", principals);
-            return new JackrabbitAccessControlPolicy[0];
-        }
-
-        @Override
-        public AccessControlPolicy[] getPolicies(String absPath)
-                throws PathNotFoundException, AccessDeniedException, RepositoryException {
-            FauxUnixPolicy pol = getPolicy(absPath);
-            if (pol != null) {
-                log.info("getPolicies({})=[{}]", absPath, pol);
-                return new AccessControlPolicy[] { pol };
-            }
-            log.info("getPolicies({})=<empty>", absPath);
-            return new AccessControlPolicy[0];
-        }
-
-        @CheckForNull
-        private FauxUnixPolicy getPolicy(@Nonnull String absPath) throws RepositoryException {
-            String oakPath = getOakPath(absPath);
-            if (oakPath != null) {
-                Tree t = getTree(oakPath, Permissions.READ, false);
-                if (t == null) {
-                    return null;
-                }
-                return new FauxUnixPolicyImpl(t, getNamePathMapper());
-            }
-            return null;
-        }
-
-        @Override
-        public AccessControlPolicy[] getEffectivePolicies(String absPath)
-                throws PathNotFoundException, AccessDeniedException, RepositoryException {
-            FauxUnixPolicy pol = getPolicy(absPath);
-            if (pol != null) {
-                log.info("getEffectivePolicies({})=[{}]", absPath, pol);
-                return new AccessControlPolicy[] { pol };
-            }
-            log.info("getEffectivePolicies({})=<empty>", absPath);
-            return new AccessControlPolicy[0];
-        }
-
-        @Override
-        public AccessControlPolicyIterator getApplicablePolicies(String absPath)
-                throws PathNotFoundException, AccessDeniedException, RepositoryException {
-            FauxUnixPolicy pol = getPolicy(absPath);
-            if (pol != null) {
-                log.info("getApplicablePolicies({})=<{}>", absPath, pol);
-                return new AccessControlPolicyIteratorAdapter(Collections.singleton(pol));
-            }
-            log.info("getApplicablePolicies({})=<empty>", absPath);
-            return AccessControlPolicyIteratorAdapter.EMPTY;
-        }
-
-        @Override
-        public void setPolicy(String absPath, AccessControlPolicy policy) throws PathNotFoundException,
-                AccessControlException, AccessDeniedException, LockException, VersionException, RepositoryException {
-            if (!(policy instanceof FauxUnixPolicyImpl)) {
-                throw new AccessControlException("Unsupported policy implementation: " + policy);
-            }
-            FauxUnixPolicyImpl fup = (FauxUnixPolicyImpl) policy;
-            if (!fup.isDirty()) {
-                return;
-            }
-
-            if (!fup.getPath().equals(absPath)) {
-                throw new AccessControlException("Path mismatch: Expected " + fup.getPath() + ", Found: " + absPath);
-            }
-
-            String oakPath = getOakPath(absPath);
-            // TODO what kind of rights do I need to run chmod?
-            Tree t = getTree(oakPath, Permissions.WRITE, false);
-            String o = TreeUtil.getString(t, REP_USER);
-            AuthInfo authInfo = getRoot().getContentSession().getAuthInfo();
-            if (!authInfo.getUserID().equals(o) && !isAdmin(authInfo.getPrincipals())) {
-                throw new AccessControlException("Unsupported path: " + absPath);
-            }
-
-            Tree typeRoot = getRoot().getTree(NodeTypeConstants.NODE_TYPES_PATH);
-            if (!TreeUtil.isNodeType(t, MIX_REP_FAUX_UNIX, typeRoot)) {
-                TreeUtil.addMixin(t, MIX_REP_FAUX_UNIX, typeRoot, null);
-            }
-            t.setProperty(REP_USER, fup.getOwner());
-            t.setProperty(REP_GROUP, fup.getGroups(), Type.STRINGS);
-            t.setProperty(REP_PERMISSIONS, fup.getPermissions());
-            log.info("setPolicy ({})={}", oakPath, fup);
-        }
-
-        @Override
-        public void removePolicy(String absPath, AccessControlPolicy policy) throws PathNotFoundException,
-                AccessControlException, AccessDeniedException, LockException, VersionException, RepositoryException {
-            throw new AccessControlException("remove not supported");
-        }
-
-        @Override
-        public boolean defines(String absPath, AccessControlPolicy acp) {
-            return acp instanceof FauxUnixPolicy;
-        }
-    }
-
-    public static interface FauxUnixPolicy extends JackrabbitAccessControlPolicy {
-
-        String getOwner();
-
-        Set<String> getGroups();
-
-        String getPermissions();
-    }
-
-    static class FauxUnixPolicyImpl implements FauxUnixPolicy {
-
-        private final String oakPath;
-
-        private final NamePathMapper namePathMapper;
-
-        private String owner;
-
-        private Set<String> groups;
-
-        private char[] permissions = DEFAULT_PERMISSIONS.toCharArray();
-
-        private boolean isDirty = false;
-
-        public FauxUnixPolicyImpl(@Nonnull Tree tree, @Nonnull NamePathMapper namePathMapper) {
-            this.oakPath = tree.getPath();
-            this.namePathMapper = namePathMapper;
-            this.owner = TreeUtil.getString(tree, REP_USER);
-            this.groups = FauxUnixAuthorizationHelper.getGroupsOrEmpty(tree);
-            String perms = TreeUtil.getString(tree, REP_PERMISSIONS);
-            if (perms != null && perms.length() == 10) {
-                this.permissions = perms.toCharArray();
-            }
-        }
-
-        @Override
-        public String getOwner() {
-            return owner;
-        }
-
-        @Override
-        public Set<String> getGroups() {
-            return groups;
-        }
-
-        @Override
-        public String getPermissions() {
-            return String.valueOf(permissions);
-        }
-
-        boolean isDirty() {
-            return isDirty;
-        }
-
-        @Override
-        public String getPath() {
-            return namePathMapper.getJcrPath(oakPath);
-        }
-
-        @Override
-        public String toString() {
-            return "UnixPolicyImpl [path=" + oakPath + ", principal=" + getOwner() + ", groups=" + getGroups()
-                    + ",permissions=" + getPermissions() + "]";
-        }
-
-        public void setOwner(String principal) {
-            // TODO does chown check if the new owner exists?
-            this.owner = principal;
-            isDirty = true;
-        }
-
-        public void setGroups(Set<String> groups) {
-            this.groups = groups;
-            isDirty = true;
-        }
-
-        public void setPermissions(String flags) throws AccessControlException {
-            if (flags.length() != 5) {
-                throw new AccessControlException("unexpected flags value. expecting: u=rwx OR g=rwx OR o=rwx OR a=rwx");
-            }
-            char[] farr = flags.toCharArray();
-            boolean isU = farr[0] == 'u';
-            boolean isG = farr[0] == 'g';
-            boolean isO = farr[0] == 'o';
-            boolean isA = farr[0] == 'a';
-            boolean isR = farr[2] == 'r';
-            boolean isW = farr[3] == 'w';
-            boolean isX = farr[4] == 'x';
-
-            if (isU || isA) {
-                permissions[1] = isR ? 'r' : '-';
-                permissions[2] = isW ? 'w' : '-';
-                permissions[3] = isX ? 'x' : '-';
-            }
-            if (isG || isA) {
-                permissions[4] = isR ? 'r' : '-';
-                permissions[5] = isW ? 'w' : '-';
-                permissions[6] = isX ? 'x' : '-';
-            }
-            if (isO || isA) {
-                permissions[7] = isR ? 'r' : '-';
-                permissions[8] = isW ? 'w' : '-';
-                permissions[9] = isX ? 'x' : '-';
-            }
-            isDirty = true;
-        }
-    }
-
     private static class FauxUnixPermissionProvider implements AggregatedPermissionProvider {
 
         private static final Logger log = LoggerFactory.getLogger(FauxUnixPermissionProvider.class);
@@ -437,9 +200,9 @@ public class FauxUnixAuthorizationConfiguration extends ConfigurationBase implem
         }
 
         @Override
-        public Set<String> getPrivileges(Tree tree) {
+        public Set<String> getPrivileges(@Nullable Tree tree) {
             // TODO
-            log.info("getPrivileges({})", tree.getPath());
+            log.info("getPrivileges({})", getPath(tree));
             throw new RuntimeException("not supported");
         }
 
@@ -450,31 +213,32 @@ public class FauxUnixAuthorizationConfiguration extends ConfigurationBase implem
         }
 
         @Override
-        public TreePermission getTreePermission(Tree tree, TreePermission parentPermission) {
-            TreePermission p = new FauxUnixPermission(tree, FauxUnixAuthorizationHelper.asNames(principals));
-            log.info("getTreePermission({}, {})={}", tree.getPath(), parentPermission, p);
+        public TreePermission getTreePermission(@Nullable Tree tree, TreePermission parentPermission) {
+            TreePermission p = new FauxUnixPermission(tree, asNames(principals));
+            log.info("getTreePermission({}, {})={}", getPath(tree), parentPermission, p);
             return p;
         }
 
         @Override
-        public TreePermission getTreePermission(Tree tree, TreeType type, TreePermission parentPermission) {
-            TreePermission p = new FauxUnixPermission(tree, FauxUnixAuthorizationHelper.asNames(principals));
-            log.info("getTreePermission({}, {}, {})={}", tree.getPath(), type, parentPermission, p);
+        public TreePermission getTreePermission(@Nullable Tree tree, TreeType type, TreePermission parentPermission) {
+            TreePermission p = new FauxUnixPermission(tree, asNames(principals));
+            log.info("getTreePermission({}, {}, {})={}", getPath(tree), type, parentPermission, p);
             return p;
         }
 
         @Override
-        public boolean hasPrivileges(Tree tree, String... privilegeNames) {
+        public boolean hasPrivileges(@Nullable Tree tree, String... privilegeNames) {
             // TODO
-            log.info("getPrivileges({}, {})", tree.getPath(), Arrays.toString(privilegeNames));
+            log.info("getPrivileges({}, {})", getPath(tree), Arrays.toString(privilegeNames));
             throw new RuntimeException("not supported");
         }
 
         @Override
-        public boolean isGranted(Tree tree, PropertyState property, long permissions) {
-            TreePermission p = new FauxUnixPermission(tree, FauxUnixAuthorizationHelper.asNames(principals));
+        public boolean isGranted(@Nullable Tree tree, PropertyState property, long permissions) {
+            TreePermission p = new FauxUnixPermission(tree, asNames(principals));
             boolean is = p.isGranted(permissions, property);
-            log.info("isGranted({}, {}, {})={}", tree.getPath(), property, Permissions.getNames(permissions), is);
+            log.info("isGranted({}, {}, {})={}", getPath(tree), getPropertyName(property),
+                    Permissions.getNames(permissions), is);
             return is;
         }
 
@@ -493,27 +257,35 @@ public class FauxUnixAuthorizationConfiguration extends ConfigurationBase implem
         }
 
         @Override
-        public PrivilegeBits supportedPrivileges(Tree tree, PrivilegeBits privilegeBits) {
+        public PrivilegeBits supportedPrivileges(@Nullable Tree tree, PrivilegeBits privilegeBits) {
             // TODO
-            log.info("supportedPrivileges({}, {})", tree.getPath(), privilegeBits);
+            log.info("supportedPrivileges({}, {})", getPath(tree), privilegeBits);
             throw new RuntimeException("not supported");
         }
 
         @Override
-        public long supportedPermissions(Tree tree, PropertyState property, long permissions) {
-            // TODO
-            log.info("supportedPermissions({}, {}, {})", tree.getPath(), property, permissions);
-            throw new RuntimeException("not supported");
+        public long supportedPermissions(@Nullable Tree tree, PropertyState property, long permissions) {
+            long supported = supported(permissions);
+            if (supported != Permissions.NO_PERMISSION) {
+                log.info("supportedPermissions({}, {}, {})={}", getPath(tree), getPropertyName(property),
+                        Permissions.getNames(permissions), Permissions.getNames(supported));
+                return supported;
+            } else {
+                log.info("supportedPermissions({}, {}, {})=NO_PERMISSION", getPath(tree), getPropertyName(property),
+                        getPropertyName(property));
+                return Permissions.NO_PERMISSION;
+            }
         }
 
         @Override
         public long supportedPermissions(TreeLocation location, long permissions) {
-            long supported = permissions & Permissions.READ;
+            long supported = supported(permissions);
             if (supported != Permissions.NO_PERMISSION) {
-                log.info("supportedPermissions({}, {})={}", location, permissions, supported);
+                log.info("supportedPermissions({}, {})={}", location, Permissions.getNames(permissions),
+                        Permissions.getNames(supported));
                 return supported;
             } else {
-                log.info("supportedPermissions({}, {})=NO_PERMISSION", location, permissions);
+                log.info("supportedPermissions({}, {})=NO_PERMISSION", location, Permissions.getNames(permissions));
                 return Permissions.NO_PERMISSION;
             }
         }
@@ -522,12 +294,19 @@ public class FauxUnixAuthorizationConfiguration extends ConfigurationBase implem
         public long supportedPermissions(TreePermission treePermission, PropertyState property, long permissions) {
             long supported = permissions & Permissions.READ;
             if (supported != Permissions.NO_PERMISSION && (treePermission instanceof FauxUnixPermission)) {
-                log.info("supportedPermissions({}, {}, {})={}", treePermission, property, permissions, supported);
+                log.info("supportedPermissions({}, {}, {})={}", treePermission, getPropertyName(property),
+                        Permissions.getNames(permissions), Permissions.getNames(supported));
                 return supported;
             } else {
-                log.info("supportedPermissions({}, {}, {})=NO_PERMISSION", treePermission, property, permissions);
+                log.info("supportedPermissions({}, {}, {})=NO_PERMISSION", treePermission, getPropertyName(property),
+                        Permissions.getNames(permissions));
                 return Permissions.NO_PERMISSION;
             }
+        }
+
+        private static long supported(long permissions) {
+            long supported = permissions & (Permissions.READ | Permissions.WRITE | Permissions.NODE_TYPE_MANAGEMENT);
+            return supported;
         }
     }
 
@@ -592,6 +371,13 @@ public class FauxUnixAuthorizationConfiguration extends ConfigurationBase implem
                 return r;
             }
 
+            if (Permissions.includes(Permissions.NODE_TYPE_MANAGEMENT, permissions)) {
+                // same as write
+                boolean r = isAllow(false);
+                log.info("isGranted({}, NODE_TYPE_MANAGEMENT)={}", tree.getPath(), r);
+                return r;
+            }
+
             log.info("isGranted({}, {})=false", tree.getPath(), Permissions.getNames(permissions));
             return false;
         }
@@ -622,7 +408,8 @@ public class FauxUnixAuthorizationConfiguration extends ConfigurationBase implem
 
             String perms = TreeUtil.getString(t, REP_PERMISSIONS);
             if (perms == null) {
-                return false;
+                log.info("warn no permission info on {}" + tree.getPath());
+                perms = DEFAULT_PERMISSIONS;
             }
 
             // user
@@ -631,7 +418,7 @@ public class FauxUnixAuthorizationConfiguration extends ConfigurationBase implem
             }
 
             // group
-            Set<String> groups = FauxUnixAuthorizationHelper.getGroupsOrEmpty(t);
+            Set<String> groups = getGroupsOrEmpty(t);
             boolean hasGroup = !Sets.intersection(principals, groups).isEmpty();
             if (hasGroup && (read && perms.charAt(4) == 'r' || perms.charAt(8) == '5')) {
                 return true;
@@ -652,7 +439,6 @@ public class FauxUnixAuthorizationConfiguration extends ConfigurationBase implem
 
     private static class FauxUnixHook implements PostValidationHook {
 
-        private static final Logger log = LoggerFactory.getLogger(FauxUnixHook.class);
         private final String adminId;
 
         public FauxUnixHook(String adminId) {
@@ -671,8 +457,7 @@ public class FauxUnixAuthorizationConfiguration extends ConfigurationBase implem
             if (info.getInfo().containsKey("SESSION_PRINCIPALS")) {
                 @SuppressWarnings("unchecked")
                 Set<Principal> principals = (Set<Principal>) info.getInfo().get("SESSION_PRINCIPALS");
-                groups = Suppliers.ofInstance(FauxUnixAuthorizationHelper.asNames(principals));
-                log.info("principals for {}={}", userId, groups);
+                groups = Suppliers.ofInstance(asNames(principals));
             } else {
                 groups = Suppliers.ofInstance(new HashSet<>());
             }
@@ -750,13 +535,14 @@ public class FauxUnixAuthorizationConfiguration extends ConfigurationBase implem
             NodeState base = builder.getNodeState();
             NodeStore store = new MemoryNodeStore(base);
             CommitHook hook = new CompositeHook(
-                    new EditorHook(new CompositeEditorProvider(new NamespaceEditorProvider(), new TypeEditorProvider()))
-            /* ,new FauxUnixHook(adminId) */ );
+                    new EditorHook(
+                            new CompositeEditorProvider(new NamespaceEditorProvider(), new TypeEditorProvider())),
+                    new FauxUnixHook(adminId));
             Root root = rootProvider.createSystemRoot(store, hook);
             if (registerNodeTypes(root)) {
-                log.info("installed required node types");
                 NodeState target = store.getRoot();
                 target.compareAgainstBaseState(base, new ApplyDiff(builder));
+                log.info("installed required node types");
             }
         }
 
@@ -781,5 +567,4 @@ public class FauxUnixAuthorizationConfiguration extends ConfigurationBase implem
             return false;
         }
     }
-
 }
