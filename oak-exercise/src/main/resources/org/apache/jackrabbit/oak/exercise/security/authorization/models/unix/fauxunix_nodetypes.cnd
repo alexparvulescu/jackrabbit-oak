@@ -26,6 +26,6 @@
 // -----------------------------------------------------------------------------
 [rep:FauxUnixMixin]
   mixin
-  - rep:user (STRING) autocreated protected
-  - rep:group (STRING) autocreated protected multiple
-  - rep:permissions (STRING) autocreated protected
+  - rep:user (STRING) protected
+  - rep:group (STRING) protected multiple
+  - rep:permissions (STRING) protected

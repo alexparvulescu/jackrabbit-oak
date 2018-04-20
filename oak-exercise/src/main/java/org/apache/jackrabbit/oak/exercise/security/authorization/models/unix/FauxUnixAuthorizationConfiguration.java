@@ -120,6 +120,8 @@ public class FauxUnixAuthorizationConfiguration extends ConfigurationBase implem
 
     // - any set policy should bubble down to all child nodes for sling to work
     // as before
+    // also, new nodes should 'inherit' the parent's group info + permissions
+    // (g+o)
 
     public static String MIX_REP_FAUX_UNIX = "rep:FauxUnixMixin";
     static final String REP_USER = "rep:user";
@@ -129,6 +131,8 @@ public class FauxUnixAuthorizationConfiguration extends ConfigurationBase implem
     static final String DEFAULT_PERMISSIONS = "-rw-r-----";
 
     private static boolean USE_ACL_MODEL = Boolean.getBoolean("useACLModel");
+
+    private static Set<String> DEFAULT_READ_PATHS = PermissionConstants.DEFAULT_READ_PATHS;
 
     @Override
     public AccessControlManager getAccessControlManager(Root root, NamePathMapper namePathMapper) {
@@ -390,7 +394,7 @@ public class FauxUnixAuthorizationConfiguration extends ConfigurationBase implem
         private boolean isAllow(boolean read) {
             // open certain paths up for 'read' access by default
             if (read) {
-                for (String p : PermissionConstants.DEFAULT_READ_PATHS) {
+                for (String p : DEFAULT_READ_PATHS) {
                     if (PathUtils.isAncestor(p, tree.getPath())) {
                         return true;
                     }
@@ -420,7 +424,7 @@ public class FauxUnixAuthorizationConfiguration extends ConfigurationBase implem
             // group
             Set<String> groups = getGroupsOrEmpty(t);
             boolean hasGroup = !Sets.intersection(principals, groups).isEmpty();
-            if (hasGroup && (read && perms.charAt(4) == 'r' || perms.charAt(8) == '5')) {
+            if (hasGroup && (read && perms.charAt(4) == 'r' || perms.charAt(5) == 'w')) {
                 return true;
             }
 
@@ -428,6 +432,7 @@ public class FauxUnixAuthorizationConfiguration extends ConfigurationBase implem
             if (read && perms.charAt(7) == 'r' || perms.charAt(8) == 'w') {
                 return true;
             }
+            log.info("isAllow (" + read + ") on {}: u:{}, g:{} vs {}", t.getPath(), u, groups, principals);
             return false;
         }
 

@@ -219,7 +219,11 @@ public class FauxUnixACLs {
 
         private static final Logger log = LoggerFactory.getLogger(FauxUnixACL.class);
 
-        private List<FauxUnixACE> aces = Collections.emptyList();
+        private List<FauxUnixACE> aces = new ArrayList<>();
+
+        private List<GroupACE> tempA = new ArrayList<>();
+
+        private List<GroupACE> tempD = new ArrayList<>();
 
         static FauxUnixACL newFauxUnixACL(@Nonnull Tree tree, @Nonnull NamePathMapper namePathMapper,
                 PrivilegeManager privilegeManager, String adminId) throws RepositoryException {
@@ -262,32 +266,51 @@ public class FauxUnixACLs {
             }
 
             Tree typeRoot = r.getTree(NodeTypeConstants.NODE_TYPES_PATH);
-            if (!TreeUtil.isNodeType(t, MIX_REP_FAUX_UNIX, typeRoot)) {
-                TreeUtil.addMixin(t, MIX_REP_FAUX_UNIX, typeRoot, null);
-            }
+            // TODO handle permission changes
             String owner = null;
-            Set<String> groups = new HashSet<>();
-            // String permissions =
-            // FauxUnixAuthorizationConfiguration.DEFAULT_PERMISSIONS;
+            Set<String> groupsAdd = new HashSet<>();
+            Set<String> groupsRm = new HashSet<>();
 
             for (AccessControlEntry ace : acl.getAccessControlEntries()) {
                 if (ace instanceof OwnerACE) {
                     owner = ((OwnerACE) ace).getPrincipal().getName();
-                }
-                if (ace instanceof GroupACE) {
-                    groups.add(((GroupACE) ace).getPrincipal().getName());
+                    break;
                 }
             }
-
             if (owner != null) {
+                if (!TreeUtil.isNodeType(t, MIX_REP_FAUX_UNIX, typeRoot)) {
+                    TreeUtil.addMixin(t, MIX_REP_FAUX_UNIX, typeRoot, null);
+                }
                 t.setProperty(REP_USER, owner);
             }
-            if (!groups.isEmpty()) {
-                t.setProperty(REP_GROUP, groups, Type.STRINGS);
 
+            for (GroupACE ace : acl.tempA) {
+                groupsAdd.add(ace.getPrincipal().getName());
+            }
+            for (GroupACE ace : acl.tempD) {
+                groupsRm.add(ace.getPrincipal().getName());
+            }
+            if (!groupsAdd.isEmpty() || !groupsRm.isEmpty()) {
+                groupUpdate(t, groupsAdd, groupsRm, typeRoot);
+            }
+        }
+
+        private static void groupUpdate(Tree t, Set<String> groupsAdd, Set<String> groupsRm, Tree typeRoot)
+                throws RepositoryException {
+            log.info("groupUpdate {}, +{}, -{}", t.getPath(), groupsAdd, groupsRm);
+            Set<String> groups = getGroupsOrEmpty(t);
+            groups.addAll(groupsAdd);
+            groups.removeAll(groupsRm);
+            t.setProperty(REP_GROUP, groups, Type.STRINGS);
+
+            if (!TreeUtil.isNodeType(t, MIX_REP_FAUX_UNIX, typeRoot)) {
+                TreeUtil.addMixin(t, MIX_REP_FAUX_UNIX, typeRoot, null);
             }
 
-            // t.setProperty(REP_PERMISSIONS, fup.getPermissions());
+            for (Tree c : t.getChildren()) {
+                groupUpdate(c, groupsAdd, groupsRm, typeRoot);
+            }
+
         }
 
         public FauxUnixACL(@Nonnull String path, @Nonnull NamePathMapper namePathMapper, List<FauxUnixACE> aces) {
@@ -306,7 +329,9 @@ public class FauxUnixACLs {
             } else {
                 log.info("addEntry {}, {}, ? {}", principal.getName(), Arrays.toString(privileges), isAllow);
                 if (isAllow) {
-                    aces.add(new GroupACE(principal, privileges));
+                    tempA.add(new GroupACE(principal, privileges));
+                } else {
+                    tempD.add(new GroupACE(principal, privileges));
                 }
             }
 
@@ -327,7 +352,11 @@ public class FauxUnixACLs {
 
         @Override
         public List<? extends JackrabbitAccessControlEntry> getEntries() {
-            return aces;
+            List<FauxUnixACE> all = new ArrayList<>();
+            all.addAll(aces);
+            all.addAll(tempA);
+            all.addAll(tempD);
+            return all;
         }
 
         @Override

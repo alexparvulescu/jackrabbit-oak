@@ -21,7 +21,6 @@ import static org.apache.jackrabbit.oak.spi.security.privilege.PrivilegeConstant
 import static org.apache.jackrabbit.oak.spi.security.privilege.PrivilegeConstants.JCR_WRITE;
 
 import java.security.Principal;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -140,7 +139,7 @@ public class FauxUnixAuthorizationHelper {
     public static Set<String> getGroupsOrEmpty(Tree tree) {
         Iterable<String> g = TreeUtil.getStrings(tree, FauxUnixAuthorizationConfiguration.REP_GROUP);
         if (g == null) {
-            return Collections.emptySet();
+            return Sets.newHashSet();
         } else {
             return Sets.newHashSet(g);
         }

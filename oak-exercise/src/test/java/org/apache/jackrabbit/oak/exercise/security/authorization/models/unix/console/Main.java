@@ -203,20 +203,22 @@ public class Main {
             w.println("Type `help name' to find out more about the function `name'.");
         }
         if (h == null || h.equals("help")) {
-            w.println("    help             -- help screen");
+            w.println("    help                 -- help screen");
+        }
+        if (h == null || h.equals("clear")) {
+            w.println("    clear                -- clears the screen");
         }
         if (h == null || h.equals("exit")) {
-            w.println("    exit             -- exit console");
+            w.println("    exit                 -- exit console");
         }
         if (h == null || h.equals("logout")) {
-            w.println("    logout           -- logout");
+            w.println("    logout               -- logout");
         }
-
         if (h == null || h.equals("whoami")) {
-            w.println("    whoami           -- print user info");
+            w.println("    whoami               -- print user info");
         }
         if (h == null || h.equals("su")) {
-            w.println("    su [user]        -- switch user (defaults to 'admin')");
+            w.println("    su [user]            -- switch user (defaults to 'admin')");
         }
         if (h == null || h.equals("useradd")) {
             w.println("    useradd user         -- add user");
@@ -230,7 +232,6 @@ public class Main {
         if (h == null || h.equals("groupadd")) {
             w.println("    groupadd group       -- add group");
         }
-
         if (h == null || h.equals("chown")) {
             w.println("    chown path user      -- change owner");
         }
@@ -240,30 +241,29 @@ public class Main {
         if (h == null || h.equals("chmod")) {
             w.println("    chmod flags path     -- flags: u=rwx OR g=rwx OR o=rwx OR a=rwx");
         }
-
         if (h == null || h.equals("ls")) {
-            w.println("    ls [path]        -- list child nodes");
+            w.println("    ls [path]            -- list child nodes");
         }
         if (h == null || h.equals("cd")) {
-            w.println("    cd path          -- change work path");
+            w.println("    cd path              -- change work path");
         }
         if (h == null || h.equals("add")) {
-            w.println("    add path         -- add node (parent path must already exist)");
+            w.println("    add path             -- add node (parent path must already exist)");
         }
         if (h == null || h.equals("rm")) {
-            w.println("    rm path          -- remove node");
+            w.println("    rm path              -- remove node");
         }
         if (h == null || h.equals("padd")) {
-            w.println("    padd name value  -- add property under current path");
+            w.println("    padd name value      -- add property under current path");
         }
         if (h == null || h.equals("prm")) {
-            w.println("    prm name         -- remove property under current path");
+            w.println("    prm name             -- remove property under current path");
         }
         if (h == null || h.equals("print")) {
-            w.println("    print [path]     -- print path info");
+            w.println("    print [path]         -- print path info");
         }
-        if (h == null || h.equals(":load")) {
-            w.println("    :load file     -- executes commands in file");
+        if (h == null || h.equals("load")) {
+            w.println("    load file            -- executes commands in file");
         }
         w.println();
     }
@@ -297,6 +297,11 @@ public class Main {
         } catch (LoginException | NoSuchWorkspaceException e) {
             console.writer().println("Err: " + e.getMessage());
         }
+    }
+
+    private void doClear() {
+        console.writer().print("\033[H\033[2J");
+        console.writer().flush();
     }
 
     private void doLs(String[] tkn) {
@@ -658,8 +663,7 @@ public class Main {
 
         while (true) {
             String l = console.readLine("[" + getUserId() + ":" + path + "] ");
-            String[] tkn = l.trim().split(" ");
-            if (!runIt(tkn)) {
+            if (l == null || !runIt(l.trim().split(" "))) {
                 return;
             }
         }
@@ -750,8 +754,12 @@ public class Main {
             doPrintProperties(tkn);
             break;
 
-        case ":load":
+        case "load":
             doLoad(tkn);
+            break;
+
+        case "clear":
+            doClear();
             break;
 
         default:
