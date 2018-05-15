@@ -222,6 +222,30 @@ public class UserAuthenticationTest extends AbstractSecurityTest {
         assertEquals(getTestUser().getPrincipal(), authentication.getUserPrincipal());
     }
 
+    @Test
+    public void testEnumerationTimingAttack() throws Exception {
+        long d = 0;
+
+        UserAuthentication authE = new UserAuthentication(getUserConfiguration(), root, userId);
+        d = 0;
+        for (int i = 0; i < 100; i++) {
+            long s = System.currentTimeMillis();
+            assertTrue(authE.authenticate(new SimpleCredentials(userId, userId.toCharArray())));
+            d += System.currentTimeMillis() - s;
+        }
+        System.err.println("existing user " + d + " ms.");
+
+        String badU = userId + "XXX";
+        UserAuthentication authNE = new UserAuthentication(getUserConfiguration(), root, badU);
+        d = 0;
+        for (int i = 0; i < 100; i++) {
+            long s = System.currentTimeMillis();
+            assertFalse(authNE.authenticate(new SimpleCredentials(badU, userId.toCharArray())));
+            d += System.currentTimeMillis() - s;
+        }
+        System.err.println("non-existing user " + d + " ms.");
+    }
+
     //--------------------------------------------------------------------------
 
     private final class TestAuthInfo implements AuthInfo {
