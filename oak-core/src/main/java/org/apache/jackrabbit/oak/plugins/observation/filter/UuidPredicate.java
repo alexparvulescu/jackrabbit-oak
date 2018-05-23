@@ -35,7 +35,7 @@ import org.apache.jackrabbit.oak.spi.state.NodeState;
  * property and the value of that property matches any of the UUIDs that
  * has been passed to the predicate's constructor.
  */
-public class UuidPredicate implements Predicate<NodeState> {
+public class UuidPredicate implements Predicate<NodeState>, java.util.function.Predicate<NodeState> {
     private final String[] uuids;
 
     /**
@@ -63,5 +63,10 @@ public class UuidPredicate implements Predicate<NodeState> {
             }
         }
         return false;
+    }
+
+    @Override
+    public boolean test(NodeState node) {
+        return apply(node);
     }
 }

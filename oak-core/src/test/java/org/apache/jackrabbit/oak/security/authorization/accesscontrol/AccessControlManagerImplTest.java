@@ -48,7 +48,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-
 import org.apache.jackrabbit.JcrConstants;
 import org.apache.jackrabbit.api.security.JackrabbitAccessControlEntry;
 import org.apache.jackrabbit.api.security.JackrabbitAccessControlList;
@@ -61,14 +60,15 @@ import org.apache.jackrabbit.oak.api.ContentSession;
 import org.apache.jackrabbit.oak.api.Root;
 import org.apache.jackrabbit.oak.api.Tree;
 import org.apache.jackrabbit.oak.api.Type;
-import org.apache.jackrabbit.oak.namepath.impl.GlobalNameMapper;
-import org.apache.jackrabbit.oak.namepath.impl.LocalNameMapper;
 import org.apache.jackrabbit.oak.namepath.NameMapper;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
+import org.apache.jackrabbit.oak.namepath.impl.GlobalNameMapper;
+import org.apache.jackrabbit.oak.namepath.impl.LocalNameMapper;
 import org.apache.jackrabbit.oak.namepath.impl.NamePathMapperImpl;
 import org.apache.jackrabbit.oak.plugins.name.ReadWriteNamespaceRegistry;
-import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants;
+import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
 import org.apache.jackrabbit.oak.plugins.value.jcr.ValueFactoryImpl;
+import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants;
 import org.apache.jackrabbit.oak.spi.security.authorization.AuthorizationConfiguration;
 import org.apache.jackrabbit.oak.spi.security.authorization.accesscontrol.ACE;
 import org.apache.jackrabbit.oak.spi.security.authorization.accesscontrol.AbstractAccessControlList;
@@ -82,7 +82,6 @@ import org.apache.jackrabbit.oak.spi.security.privilege.PrivilegeBits;
 import org.apache.jackrabbit.oak.spi.security.privilege.PrivilegeBitsProvider;
 import org.apache.jackrabbit.oak.spi.security.privilege.PrivilegeConstants;
 import org.apache.jackrabbit.oak.util.NodeUtil;
-import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -128,7 +127,7 @@ public class AccessControlManagerImplTest extends AbstractSecurityTest implement
         NameMapper nameMapper = new GlobalNameMapper(root);
         npMapper = new NamePathMapperImpl(nameMapper);
 
-        acMgr = new AccessControlManagerImpl(root, npMapper, getSecurityProvider());
+        acMgr = new AccessControlManagerImpl(root, npMapper, getSecurityProvider(), getNodeTypeManagementProvider());
 
         NodeUtil rootNode = new NodeUtil(root.getTree("/"), getNamePathMapper());
         rootNode.addChild(testName, JcrConstants.NT_UNSTRUCTURED);
@@ -172,7 +171,7 @@ public class AccessControlManagerImplTest extends AbstractSecurityTest implement
     }
 
     private AccessControlManagerImpl createAccessControlManager(@Nonnull Root root, @Nonnull NamePathMapper namePathMapper) {
-        return new AccessControlManagerImpl(root, namePathMapper, getSecurityProvider());
+        return new AccessControlManagerImpl(root, namePathMapper, getSecurityProvider(), getNodeTypeManagementProvider());
     }
 
     private RestrictionProvider getRestrictionProvider() {
@@ -184,7 +183,7 @@ public class AccessControlManagerImplTest extends AbstractSecurityTest implement
     }
 
     private AccessControlManagerImpl getTestAccessControlManager() throws Exception {
-        return new AccessControlManagerImpl(getTestRoot(), getNamePathMapper(), getSecurityProvider());
+        return new AccessControlManagerImpl(getTestRoot(), getNamePathMapper(), getSecurityProvider(), getNodeTypeManagementProvider());
     }
 
     private Root getTestRoot() throws Exception {

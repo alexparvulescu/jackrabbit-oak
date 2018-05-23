@@ -61,7 +61,7 @@ public class UserValidatorTest extends AbstractSecurityTest implements UserConst
     }
 
     private UserValidatorProvider createValidatorProvider() {
-        return new UserValidatorProvider(getConfig(), getRootProvider(), getTreeProvider());
+        return new UserValidatorProvider(getConfig(), getRootProvider(), getTreeProvider(), getIdentifierManagementProvider());
     }
 
     @Test
@@ -269,7 +269,7 @@ public class UserValidatorTest extends AbstractSecurityTest implements UserConst
         invalid.add(userPath);
         invalid.add(userPath + "/folder");
 
-        UserProvider up = new UserProvider(root, getUserConfiguration().getParameters());
+        UserProvider up = new UserProvider(root, getUserConfiguration().getParameters(), getIdentifierManagementProvider());
         for (String path : invalid) {
             try {
                 Tree parent = root.getTree(path);

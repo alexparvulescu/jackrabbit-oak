@@ -16,31 +16,39 @@
  */
 package org.apache.jackrabbit.oak.spi.security.authorization.cug.impl;
 
+import static org.apache.jackrabbit.oak.api.CommitFailedException.ACCESS_CONTROL;
+
+import java.util.function.Predicate;
+
 import javax.annotation.Nonnull;
 
 import org.apache.jackrabbit.JcrConstants;
 import org.apache.jackrabbit.oak.api.CommitFailedException;
 import org.apache.jackrabbit.oak.api.PropertyState;
 import org.apache.jackrabbit.oak.api.Type;
-import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants;
-import org.apache.jackrabbit.oak.plugins.nodetype.TypePredicate;
 import org.apache.jackrabbit.oak.spi.commit.CommitInfo;
 import org.apache.jackrabbit.oak.spi.commit.DefaultValidator;
 import org.apache.jackrabbit.oak.spi.commit.Validator;
 import org.apache.jackrabbit.oak.spi.commit.ValidatorProvider;
 import org.apache.jackrabbit.oak.spi.commit.VisibleValidator;
+import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants;
+import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeManagementProvider;
+import org.apache.jackrabbit.oak.spi.nodetype.predicates.TypePredicates;
 import org.apache.jackrabbit.oak.spi.state.NodeState;
 import org.apache.jackrabbit.oak.spi.state.NodeStateUtils;
 
-import static org.apache.jackrabbit.oak.api.CommitFailedException.ACCESS_CONTROL;
-
 class CugValidatorProvider extends ValidatorProvider implements CugConstants {
 
-    private TypePredicate isMixCug;
+    private NodeTypeManagementProvider ntMgtProvider;
+    private Predicate<NodeState> isMixCug;
+
+    CugValidatorProvider(@Nonnull NodeTypeManagementProvider ntMgtProvider) {
+        this.ntMgtProvider = ntMgtProvider;
+    }
 
     @Override
-    protected Validator getRootValidator(NodeState before, NodeState after, CommitInfo info) {
-        this.isMixCug = new TypePredicate(after, MIX_REP_CUG_MIXIN);
+    protected Validator getRootValidator(@Nonnull NodeState before, @Nonnull NodeState after, @Nonnull CommitInfo info) {
+        this.isMixCug = TypePredicates.getNodeTypePredicate(after, MIX_REP_CUG_MIXIN);
         return new CugValidator("", after, false);
     }
 
@@ -52,7 +60,7 @@ class CugValidatorProvider extends ValidatorProvider implements CugConstants {
         if (!NT_REP_CUG_POLICY.equals(NodeStateUtils.getPrimaryTypeName(nodeState))) {
             throw accessViolation(21, "Reserved name 'rep:cugPolicy' must only be used for nodes of type 'rep:CugPolicy'.");
         }
-        if (!isMixCug.apply(parent)) {
+        if (!isMixCug.test(parent)) {
             throw accessViolation(22, "Parent node not of mixin type 'rep:CugMixin'.");
         }
     }

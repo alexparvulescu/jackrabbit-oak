@@ -16,13 +16,19 @@
  */
 package org.apache.jackrabbit.oak.spi.security.authorization.cug.impl;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+
 import java.util.ArrayList;
 import java.util.List;
+
 import javax.annotation.Nonnull;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import org.apache.jackrabbit.JcrConstants;
 import org.apache.jackrabbit.oak.api.ContentSession;
 import org.apache.jackrabbit.oak.api.PropertyState;
@@ -32,24 +38,20 @@ import org.apache.jackrabbit.oak.api.Type;
 import org.apache.jackrabbit.oak.commons.PathUtils;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
 import org.apache.jackrabbit.oak.plugins.identifier.IdentifierManager;
-import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants;
 import org.apache.jackrabbit.oak.plugins.tree.TreeType;
-import org.apache.jackrabbit.oak.plugins.version.ReadOnlyVersionManager;
-import org.apache.jackrabbit.oak.spi.version.VersionConstants;
+import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
+import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants;
 import org.apache.jackrabbit.oak.spi.security.authorization.permission.Permissions;
 import org.apache.jackrabbit.oak.spi.security.authorization.permission.TreePermission;
 import org.apache.jackrabbit.oak.spi.security.principal.EveryonePrincipal;
-import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
+import org.apache.jackrabbit.oak.spi.version.VersionConstants;
+import org.apache.jackrabbit.oak.spi.version.VersionManager;
 import org.junit.Before;
 import org.junit.Test;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 
 /**
  * Test read access to version related information both in the regular
@@ -59,7 +61,7 @@ public class VersionTest extends AbstractCugTest implements NodeTypeConstants, V
 
     private ContentSession testSession;
     private Root testRoot;
-    private ReadOnlyVersionManager versionManager;
+    private VersionManager versionManager;
 
     private List<String> readAccess = new ArrayList<String>();
     private List<String> noReadAccess = new ArrayList<String>();
@@ -95,7 +97,7 @@ public class VersionTest extends AbstractCugTest implements NodeTypeConstants, V
         testSession = createTestSession();
         testRoot = testSession.getLatestRoot();
 
-        versionManager = ReadOnlyVersionManager.getInstance(root, NamePathMapper.DEFAULT);
+        versionManager = createVersionManager(root);
     }
 
     @Override
@@ -107,6 +109,10 @@ public class VersionTest extends AbstractCugTest implements NodeTypeConstants, V
         } finally {
             super.after();
         }
+    }
+
+    private VersionManager createVersionManager(@Nonnull Root root) {
+        return getVersionManagementProvider().getReadOnlyVersionManager(root, NamePathMapper.DEFAULT);
     }
 
     private Tree addVersionContent(@Nonnull String path) throws Exception {
@@ -132,7 +138,7 @@ public class VersionTest extends AbstractCugTest implements NodeTypeConstants, V
     @Test
     public void testReadVersionContent() throws Exception {
         IdentifierManager idMgr = new IdentifierManager(testRoot);
-        ReadOnlyVersionManager vMgr = ReadOnlyVersionManager.getInstance(testRoot, NamePathMapper.DEFAULT);
+        VersionManager vMgr = createVersionManager(testRoot);
 
         for (String path : readAccess) {
             Tree t = testRoot.getTree(path);
@@ -276,7 +282,7 @@ public class VersionTest extends AbstractCugTest implements NodeTypeConstants, V
             t = t.getChild(segm);
             tp = pp.getTreePermission(t, tp);
 
-            if (JCR_SYSTEM.equals(segm) || ReadOnlyVersionManager.isVersionStoreTree(t)) {
+            if (JCR_SYSTEM.equals(segm) || versionManager.isVersionStorageTree(t)) {
                 assertTrue(t.getPath(), tp instanceof EmptyCugTreePermission);
             } else {
                 assertTrue(t.getPath(), tp instanceof CugTreePermission);
@@ -300,7 +306,7 @@ public class VersionTest extends AbstractCugTest implements NodeTypeConstants, V
             t = t.getChild(segm);
             tp = pp.getTreePermission(t, tp);
 
-            if (JCR_SYSTEM.equals(segm) || ReadOnlyVersionManager.isVersionStoreTree(t)) {
+            if (JCR_SYSTEM.equals(segm) || versionManager.isVersionStorageTree(t)) {
                 assertTrue(t.getPath(), tp instanceof EmptyCugTreePermission);
             } else {
                 assertTrue(t.getPath(), tp instanceof CugTreePermission);
@@ -322,7 +328,7 @@ public class VersionTest extends AbstractCugTest implements NodeTypeConstants, V
             t = t.getChild(segm);
             tp = pp.getTreePermission(t, tp);
 
-            if (JCR_SYSTEM.equals(segm) || ReadOnlyVersionManager.isVersionStoreTree(t)) {
+            if (JCR_SYSTEM.equals(segm) || versionManager.isVersionStorageTree(t)) {
                 assertTrue(t.getPath(), tp instanceof EmptyCugTreePermission);
             } else {
                 assertSame(t.getPath(), TreePermission.NO_RECOURSE, tp);

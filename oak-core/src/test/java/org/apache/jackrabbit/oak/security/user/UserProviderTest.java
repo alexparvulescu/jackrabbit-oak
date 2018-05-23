@@ -29,6 +29,7 @@ import org.apache.jackrabbit.oak.api.CommitFailedException;
 import org.apache.jackrabbit.oak.api.Root;
 import org.apache.jackrabbit.oak.api.Tree;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
+import org.apache.jackrabbit.oak.plugins.identifier.IdentifierManagementProviderService;
 import org.apache.jackrabbit.oak.plugins.index.property.PropertyIndexEditorProvider;
 import org.apache.jackrabbit.oak.plugins.nodetype.ReadOnlyNodeTypeManager;
 import org.apache.jackrabbit.oak.InitialContent;
@@ -86,19 +87,23 @@ public class UserProviderTest {
     }
 
     private UserProvider createUserProvider() {
-        return new UserProvider(root, defaultConfig);
+        return createUserProvider(defaultConfig);
     }
 
     private UserProvider createUserProvider(int defaultDepth) {
         Map<String, Object> options = new HashMap<String, Object>(customOptions);
         options.put(UserConstants.PARAM_DEFAULT_DEPTH, defaultDepth);
-        return new UserProvider(root, ConfigurationParameters.of(options));
+        return createUserProvider(ConfigurationParameters.of(options));
     }
 
     private UserProvider createUserProviderRFC7612() {
         Map<String, Object> options = new HashMap<String, Object>(customOptions);
         options.put(UserConstants.PARAM_ENABLE_RFC7613_USERCASE_MAPPED_PROFILE, true);
-        return new UserProvider(root, ConfigurationParameters.of(options));
+        return createUserProvider(ConfigurationParameters.of(options));
+    }
+
+    private UserProvider createUserProvider(@Nonnull ConfigurationParameters params) {
+        return new UserProvider(root, params, new IdentifierManagementProviderService());
     }
 
     @Test
@@ -355,7 +360,7 @@ public class UserProviderTest {
                 return "aaa";
             }
         });
-        UserProvider up = new UserProvider(root, config);
+        UserProvider up = createUserProvider(config);
 
         try {
             Tree u1 = up.createUser("a", null);

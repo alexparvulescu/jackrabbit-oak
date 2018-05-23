@@ -16,6 +16,10 @@
  */
 package org.apache.jackrabbit.oak.security.authorization.permission;
 
+import static com.google.common.collect.Iterators.concat;
+import static org.apache.jackrabbit.oak.spi.security.authorization.permission.TreePermission.ALL;
+import static org.apache.jackrabbit.oak.spi.security.authorization.permission.TreePermission.EMPTY;
+
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -25,11 +29,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.jackrabbit.JcrConstants;
 import org.apache.jackrabbit.commons.iterator.AbstractLazyIterator;
 import org.apache.jackrabbit.oak.api.PropertyState;
@@ -39,7 +43,6 @@ import org.apache.jackrabbit.oak.commons.PathUtils;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
 import org.apache.jackrabbit.oak.plugins.tree.TreeType;
 import org.apache.jackrabbit.oak.plugins.tree.TreeTypeProvider;
-import org.apache.jackrabbit.oak.plugins.version.ReadOnlyVersionManager;
 import org.apache.jackrabbit.oak.security.authorization.ProviderCtx;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationParameters;
 import org.apache.jackrabbit.oak.spi.security.Context;
@@ -53,12 +56,11 @@ import org.apache.jackrabbit.oak.spi.security.privilege.PrivilegeBits;
 import org.apache.jackrabbit.oak.spi.security.privilege.PrivilegeBitsProvider;
 import org.apache.jackrabbit.oak.spi.security.privilege.PrivilegeConstants;
 import org.apache.jackrabbit.oak.spi.state.NodeState;
+import org.apache.jackrabbit.oak.spi.version.VersionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.google.common.collect.Iterators.concat;
-import static org.apache.jackrabbit.oak.spi.security.authorization.permission.TreePermission.ALL;
-import static org.apache.jackrabbit.oak.spi.security.authorization.permission.TreePermission.EMPTY;
+import com.google.common.collect.ImmutableMap;
 
 final class CompiledPermissionImpl implements CompiledPermissions, PermissionConstants {
 
@@ -80,7 +82,7 @@ final class CompiledPermissionImpl implements CompiledPermissions, PermissionCon
     private final ProviderCtx providerCtx;
 
     private Root root;
-    private ReadOnlyVersionManager versionManager;
+    private VersionManager versionManager;
     private PrivilegeBitsProvider bitsProvider;
 
     private CompiledPermissionImpl(@Nonnull Set<Principal> principals,
@@ -177,7 +179,7 @@ final class CompiledPermissionImpl implements CompiledPermissions, PermissionCon
             case HIDDEN:
                 return ALL;
             case VERSION:
-                if (ReadOnlyVersionManager.isVersionStoreTree(tree)) {
+                if (getVersionManager().isVersionStorageTree(tree)) {
                     return new TreePermissionImpl(tree, TreeType.VERSION, parentPermission);
                 } else {
                     Tree versionableTree = getVersionManager().getVersionable(tree, workspaceName);
@@ -423,7 +425,7 @@ final class CompiledPermissionImpl implements CompiledPermissions, PermissionCon
 
     @CheckForNull
     private Tree getEvaluationTree(@Nonnull Tree versionStoreTree) {
-        if (ReadOnlyVersionManager.isVersionStoreTree(versionStoreTree)) {
+        if (getVersionManager().isVersionStorageTree(versionStoreTree)) {
             return versionStoreTree;
         } else {
             return getVersionManager().getVersionable(versionStoreTree, workspaceName);
@@ -431,9 +433,9 @@ final class CompiledPermissionImpl implements CompiledPermissions, PermissionCon
     }
 
     @Nonnull
-    private ReadOnlyVersionManager getVersionManager() {
+    private VersionManager getVersionManager() {
         if (versionManager == null) {
-            versionManager = ReadOnlyVersionManager.getInstance(root, NamePathMapper.DEFAULT);
+            versionManager = providerCtx.getVersionManagementProvider().getReadOnlyVersionManager(root, NamePathMapper.DEFAULT);
         }
         return versionManager;
     }

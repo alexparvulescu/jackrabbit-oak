@@ -25,6 +25,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
+
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -42,9 +44,9 @@ import org.apache.jackrabbit.oak.commons.UUIDUtils;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
 import org.apache.jackrabbit.oak.plugins.memory.PropertyBuilder;
 import org.apache.jackrabbit.oak.plugins.nodetype.ReadOnlyNodeTypeManager;
-import org.apache.jackrabbit.oak.plugins.nodetype.TypePredicate;
 import org.apache.jackrabbit.oak.plugins.tree.factories.RootFactory;
 import org.apache.jackrabbit.oak.plugins.tree.factories.TreeFactory;
+import org.apache.jackrabbit.oak.spi.nodetype.predicates.TypePredicates;
 import org.apache.jackrabbit.oak.spi.state.ChildNodeEntry;
 import org.apache.jackrabbit.oak.spi.state.NodeBuilder;
 import org.apache.jackrabbit.oak.spi.state.NodeState;
@@ -81,14 +83,14 @@ public class ReadWriteVersionManager extends ReadOnlyVersionManager {
 
     private final NodeBuilder versionStorageNode;
     private final NodeBuilder workspaceRoot;
-    private final TypePredicate isVersion;
+    private final Predicate<NodeState> isVersion;
     private ReadOnlyNodeTypeManager ntMgr;
 
     public ReadWriteVersionManager(NodeBuilder versionStorageNode,
                             NodeBuilder workspaceRoot) {
         this.versionStorageNode = checkNotNull(versionStorageNode);
         this.workspaceRoot = checkNotNull(workspaceRoot);
-        this.isVersion = new TypePredicate(workspaceRoot.getNodeState(), NT_VERSION);
+        this.isVersion = TypePredicates.getNodeTypePredicate(workspaceRoot.getNodeState(), NT_VERSION);
     }
 
     @Nonnull
@@ -615,7 +617,7 @@ public class ReadWriteVersionManager extends ReadOnlyVersionManager {
         for (ChildNodeEntry entry : versionHistory.getChildNodeEntries()) {
             String name = entry.getName();
             NodeState node = entry.getNodeState();
-            if (!JCR_ROOTVERSION.equals(name) && isVersion.apply(node)) {
+            if (!JCR_ROOTVERSION.equals(name) && isVersion.test(node)) {
                 return false; // a checked-in version
             }
         }

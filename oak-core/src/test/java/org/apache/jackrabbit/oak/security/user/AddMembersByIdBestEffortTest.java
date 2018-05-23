@@ -127,7 +127,8 @@ public class AddMembersByIdBestEffortTest extends AbstractAddMembersByIdTest {
 
     @Test
     public void testAddByContentID() throws Exception {
-        AuthorizableBaseProvider provider = new UserProvider(root, ConfigurationParameters.of(getUserConfiguration().getParameters(), ConfigurationParameters.of(UserConstants.PARAM_ENABLE_RFC7613_USERCASE_MAPPED_PROFILE, false)));
+        ConfigurationParameters params = ConfigurationParameters.of(getUserConfiguration().getParameters(), ConfigurationParameters.of(UserConstants.PARAM_ENABLE_RFC7613_USERCASE_MAPPED_PROFILE, false));
+        AuthorizableBaseProvider provider = new UserProvider(root, params, getIdentifierManagementProvider());
         Set<String> failed = testGroup.addMembers(provider.getContentID(getTestUser().getID()));
         assertTrue(failed.isEmpty());
 

@@ -16,21 +16,20 @@
  */
 package org.apache.jackrabbit.oak.security.user;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
 import org.apache.jackrabbit.oak.api.Root;
 import org.apache.jackrabbit.oak.api.Tree;
 import org.apache.jackrabbit.oak.commons.UUIDUtils;
-import org.apache.jackrabbit.oak.plugins.identifier.IdentifierManager;
+import org.apache.jackrabbit.oak.spi.identifier.IdentifierManagementProvider;
+import org.apache.jackrabbit.oak.spi.identifier.IdentifierManager;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationParameters;
 import org.apache.jackrabbit.oak.spi.security.user.AuthorizableType;
 import org.apache.jackrabbit.oak.spi.security.user.UserConstants;
 import org.apache.jackrabbit.oak.spi.security.user.util.UserUtil;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-import static org.apache.jackrabbit.oak.commons.UUIDUtils.generateUUID;
-import static org.apache.jackrabbit.oak.plugins.identifier.IdentifierManager.getIdentifier;
 
 /**
  * Base class for {@link UserProvider} and {@link MembershipProvider}.
@@ -43,11 +42,11 @@ abstract class AuthorizableBaseProvider implements UserConstants {
 
     private final boolean usercaseMappedProfile;
 
-    AuthorizableBaseProvider(@Nonnull Root root, @Nonnull ConfigurationParameters config) {
+    AuthorizableBaseProvider(@Nonnull Root root, @Nonnull ConfigurationParameters config, @Nonnull IdentifierManagementProvider identifierManagementProvider) {
         this.root = checkNotNull(root);
         this.config = checkNotNull(config);
 
-        identifierManager = new IdentifierManager(root);
+        identifierManager = identifierManagementProvider.getIdentifierManager(root);
         usercaseMappedProfile = config.getConfigValue(PARAM_ENABLE_RFC7613_USERCASE_MAPPED_PROFILE, DEFAULT_ENABLE_RFC7613_USERCASE_MAPPED_PROFILE);
     }
 
@@ -78,7 +77,7 @@ abstract class AuthorizableBaseProvider implements UserConstants {
 
     @Nonnull
     String getContentID(@Nonnull Tree authorizableTree) {
-        return getIdentifier(authorizableTree);
+        return identifierManager.getIdentifierFromTree(authorizableTree);
     }
 
     @Nonnull

@@ -21,7 +21,9 @@ import javax.annotation.Nonnull;
 import org.apache.jackrabbit.oak.plugins.tree.RootProvider;
 import org.apache.jackrabbit.oak.plugins.tree.TreeProvider;
 import org.apache.jackrabbit.oak.spi.mount.MountInfoProvider;
+import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeManagementProvider;
 import org.apache.jackrabbit.oak.spi.security.SecurityProvider;
+import org.apache.jackrabbit.oak.spi.version.VersionManagementProvider;
 
 public interface ProviderCtx {
 
@@ -33,6 +35,12 @@ public interface ProviderCtx {
 
     @Nonnull
     RootProvider getRootProvider();
+
+    @Nonnull
+    NodeTypeManagementProvider getNodeTypeManagementProvider();
+
+    @Nonnull
+    VersionManagementProvider getVersionManagementProvider();
 
     @Nonnull
     MountInfoProvider getMountInfoProvider();

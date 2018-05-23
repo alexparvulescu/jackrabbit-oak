@@ -16,6 +16,9 @@
  */
 package org.apache.jackrabbit.oak.security.authentication.token;
 
+import static org.apache.jackrabbit.oak.api.Type.DATE;
+import static org.apache.jackrabbit.oak.api.Type.STRING;
+
 import java.io.UnsupportedEncodingException;
 import java.security.NoSuchAlgorithmException;
 import java.security.Principal;
@@ -27,6 +30,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -34,7 +38,6 @@ import javax.jcr.AccessDeniedException;
 import javax.jcr.Credentials;
 import javax.jcr.RepositoryException;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.jackrabbit.JcrConstants;
 import org.apache.jackrabbit.api.security.authentication.token.TokenCredentials;
 import org.apache.jackrabbit.api.security.user.Authorizable;
@@ -45,7 +48,9 @@ import org.apache.jackrabbit.oak.api.PropertyState;
 import org.apache.jackrabbit.oak.api.Root;
 import org.apache.jackrabbit.oak.api.Tree;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
-import org.apache.jackrabbit.oak.plugins.identifier.IdentifierManager;
+import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
+import org.apache.jackrabbit.oak.spi.identifier.IdentifierManagementProvider;
+import org.apache.jackrabbit.oak.spi.identifier.IdentifierManager;
 import org.apache.jackrabbit.oak.spi.namespace.NamespaceConstants;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationParameters;
 import org.apache.jackrabbit.oak.spi.security.authentication.ImpersonationCredentials;
@@ -56,15 +61,12 @@ import org.apache.jackrabbit.oak.spi.security.authentication.token.TokenInfo;
 import org.apache.jackrabbit.oak.spi.security.authentication.token.TokenProvider;
 import org.apache.jackrabbit.oak.spi.security.user.UserConfiguration;
 import org.apache.jackrabbit.oak.spi.security.user.util.PasswordUtil;
-import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
 import org.apache.jackrabbit.util.ISO8601;
 import org.apache.jackrabbit.util.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.jackrabbit.oak.api.Type.DATE;
-import static org.apache.jackrabbit.oak.api.Type.STRING;
-import static org.apache.jackrabbit.oak.plugins.identifier.IdentifierManager.getIdentifier;
+import com.google.common.collect.ImmutableMap;
 
 /**
  * Default implementation of the {@code TokenProvider} interface that keeps login
@@ -126,18 +128,23 @@ class TokenProviderImpl implements TokenProvider, TokenConstants {
     private final IdentifierManager identifierManager;
     private final long cleanupThreshold;
 
-    TokenProviderImpl(@Nonnull Root root, @Nonnull ConfigurationParameters options, @Nonnull UserConfiguration userConfiguration) {
-        this(root, options, userConfiguration, SimpleCredentialsSupport.getInstance());
+    TokenProviderImpl(@Nonnull Root root, @Nonnull ConfigurationParameters options,
+                      @Nonnull UserConfiguration userConfiguration,
+                      @Nonnull IdentifierManagementProvider identifierManagementProvider) {
+        this(root, options, userConfiguration, identifierManagementProvider, SimpleCredentialsSupport.getInstance());
     }
 
-    TokenProviderImpl(@Nonnull Root root, @Nonnull ConfigurationParameters options, @Nonnull UserConfiguration userConfiguration, @Nonnull CredentialsSupport credentialsSupport) {
+    TokenProviderImpl(@Nonnull Root root, @Nonnull ConfigurationParameters options,
+                      @Nonnull UserConfiguration userConfiguration,
+                      @Nonnull IdentifierManagementProvider identifierManagementProvider,
+                      @Nonnull CredentialsSupport credentialsSupport) {
         this.root = root;
         this.options = options;
         this.credentialsSupport = credentialsSupport;
 
         this.tokenExpiration = options.getConfigValue(PARAM_TOKEN_EXPIRATION, DEFAULT_TOKEN_EXPIRATION);
         this.userManager = userConfiguration.getUserManager(root, NamePathMapper.DEFAULT);
-        this.identifierManager = new IdentifierManager(root);
+        this.identifierManager = identifierManagementProvider.getIdentifierManager(root);
         this.cleanupThreshold = options.getConfigValue(PARAM_TOKEN_CLEANUP_THRESHOLD, NO_TOKEN_CLEANUP);
     }
 
@@ -427,7 +434,7 @@ class TokenProviderImpl implements TokenProvider, TokenConstants {
         tokenNode.setProperty(JcrConstants.JCR_UUID, uuid);
 
         String key = generateKey(options.getConfigValue(PARAM_TOKEN_LENGTH, DEFAULT_KEY_SIZE));
-        String nodeId = getIdentifier(tokenNode);
+        String nodeId = identifierManager.getIdentifierFromTree(tokenNode);
         String token = nodeId + DELIM + key;
 
         String keyHash = PasswordUtil.buildPasswordHash(getKeyValue(key, id), options);

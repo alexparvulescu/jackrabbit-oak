@@ -53,7 +53,7 @@ public class TokenProviderImplReadOnlyTest extends AbstractTokenTest {
 
         cs = login(new GuestCredentials());
         readOnlyRoot = cs.getLatestRoot();
-        readOnlyTp = new TokenProviderImpl(readOnlyRoot, getTokenConfig(), getUserConfiguration());
+        readOnlyTp = new TokenProviderImpl(readOnlyRoot, getTokenConfig(), getUserConfiguration(), getIdentifierManagementProvider());
     }
 
     private String generateToken() throws Exception {

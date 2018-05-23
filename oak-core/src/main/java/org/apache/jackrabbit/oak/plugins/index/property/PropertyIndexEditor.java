@@ -33,6 +33,7 @@ import static org.apache.jackrabbit.oak.plugins.index.property.PropertyIndexUtil
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import javax.annotation.Nonnull;
 import javax.jcr.PropertyType;
@@ -45,14 +46,13 @@ import org.apache.jackrabbit.oak.plugins.index.IndexEditor;
 import org.apache.jackrabbit.oak.plugins.index.IndexUpdateCallback;
 import org.apache.jackrabbit.oak.plugins.index.property.strategy.IndexStoreStrategy;
 import org.apache.jackrabbit.oak.plugins.memory.PropertyValues;
-import org.apache.jackrabbit.oak.plugins.nodetype.TypePredicate;
 import org.apache.jackrabbit.oak.spi.commit.Editor;
 import org.apache.jackrabbit.oak.spi.filter.PathFilter;
 import org.apache.jackrabbit.oak.spi.mount.MountInfoProvider;
+import org.apache.jackrabbit.oak.spi.nodetype.predicates.TypePredicates;
 import org.apache.jackrabbit.oak.spi.state.NodeBuilder;
 import org.apache.jackrabbit.oak.spi.state.NodeState;
 
-import com.google.common.base.Predicate;
 
 /**
  * Index editor for keeping a property index up to date.
@@ -138,7 +138,7 @@ class PropertyIndexEditor implements IndexEditor {
         // get declaring types, and all their subtypes
         // TODO: should we reindex when type definitions change?
         if (definition.hasProperty(DECLARING_NODE_TYPES)) {
-            this.typePredicate = new TypePredicate(
+            this.typePredicate = TypePredicates.getNodeTypePredicate(
                     root, definition.getNames(DECLARING_NODE_TYPES));
         } else {
             this.typePredicate = null;
@@ -258,11 +258,11 @@ class PropertyIndexEditor implements IndexEditor {
                 beforeKeys = getMatchingKeys(before, getPropertyNames(), valuePattern);
                 afterKeys = getMatchingKeys(after, getPropertyNames(), valuePattern);
             }
-            if (beforeKeys != null && !typePredicate.apply(before)) {
+            if (beforeKeys != null && !typePredicate.test(before)) {
                 // the before state doesn't match the type, so clear its values
                 beforeKeys = null;
             }
-            if (afterKeys != null && !typePredicate.apply(after)) {
+            if (afterKeys != null && !typePredicate.test(after)) {
                 // the after state doesn't match the type, so clear its values
                 afterKeys = null;
             }
@@ -274,7 +274,7 @@ class PropertyIndexEditor implements IndexEditor {
         if (beforeKeys != null || afterKeys != null) {
             // first make sure that both the before and after sets are non-null
             if (beforeKeys == null
-                    || (typePredicate != null && !typePredicate.apply(before))) {
+                    || (typePredicate != null && !typePredicate.test(before))) {
                 beforeKeys = newHashSet();
             } else if (afterKeys == null) {
                 afterKeys = newHashSet();

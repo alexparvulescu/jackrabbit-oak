@@ -16,6 +16,10 @@
  */
 package org.apache.jackrabbit.oak.security.user;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
+import static org.apache.jackrabbit.oak.api.Type.STRINGS;
+
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+
 import javax.annotation.Nonnull;
 import javax.jcr.ImportUUIDBehavior;
 import javax.jcr.PropertyType;
@@ -33,9 +38,6 @@ import javax.jcr.Session;
 import javax.jcr.nodetype.ConstraintViolationException;
 import javax.jcr.nodetype.PropertyDefinition;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import org.apache.jackrabbit.api.JackrabbitSession;
 import org.apache.jackrabbit.api.security.principal.PrincipalIterator;
 import org.apache.jackrabbit.api.security.principal.PrincipalManager;
@@ -49,9 +51,12 @@ import org.apache.jackrabbit.oak.api.Root;
 import org.apache.jackrabbit.oak.api.Tree;
 import org.apache.jackrabbit.oak.api.Type;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
-import org.apache.jackrabbit.oak.plugins.identifier.IdentifierManager;
 import org.apache.jackrabbit.oak.plugins.memory.PropertyStates;
+import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
+import org.apache.jackrabbit.oak.spi.identifier.IdentifierManagementProvider;
+import org.apache.jackrabbit.oak.spi.identifier.IdentifierManager;
 import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants;
+import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeManagementProvider;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationParameters;
 import org.apache.jackrabbit.oak.spi.security.SecurityProvider;
 import org.apache.jackrabbit.oak.spi.security.principal.PrincipalImpl;
@@ -64,13 +69,12 @@ import org.apache.jackrabbit.oak.spi.xml.ProtectedNodeImporter;
 import org.apache.jackrabbit.oak.spi.xml.ProtectedPropertyImporter;
 import org.apache.jackrabbit.oak.spi.xml.ReferenceChangeTracker;
 import org.apache.jackrabbit.oak.spi.xml.TextValue;
-import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
-import static org.apache.jackrabbit.oak.api.Type.STRINGS;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 /**
  * {@code UserImporter} implements both {@code ode>ProtectedPropertyImporter}
@@ -131,6 +135,9 @@ class UserImporter implements ProtectedPropertyImporter, ProtectedNodeImporter, 
 
     private final int importBehavior;
 
+    private final NodeTypeManagementProvider nodeTypeManagementProvider;
+    private final IdentifierManagementProvider identifierManagementProvider;
+
     private Root root;
     private NamePathMapper namePathMapper;
     private ReferenceChangeTracker referenceTracker;
@@ -162,8 +169,12 @@ class UserImporter implements ProtectedPropertyImporter, ProtectedNodeImporter, 
      */
     private Map<String, Principal> principals = new HashMap<String, Principal>();
 
-    UserImporter(ConfigurationParameters config) {
+    UserImporter(@Nonnull ConfigurationParameters config,
+                 @Nonnull NodeTypeManagementProvider nodeTypeManagementProvider,
+                 @Nonnull IdentifierManagementProvider identifierManagementProvider) {
         importBehavior = UserUtil.getImportBehavior(config);
+        this.nodeTypeManagementProvider = nodeTypeManagementProvider;
+        this.identifierManagementProvider = identifierManagementProvider;
     }
 
     //----------------------------------------------< ProtectedItemImporter >---
@@ -193,7 +204,7 @@ class UserImporter implements ProtectedPropertyImporter, ProtectedNodeImporter, 
             return false;
         }
 
-        userManager = new UserManagerImpl(root, namePathMapper, securityProvider);
+        userManager = new UserManagerImpl(root, namePathMapper, securityProvider, nodeTypeManagementProvider, identifierManagementProvider);
 
         initialized = true;
         return initialized;
@@ -447,7 +458,7 @@ class UserImporter implements ProtectedPropertyImporter, ProtectedNodeImporter, 
     @Nonnull
     private IdentifierManager getIdentifierManager() {
         if (identifierManager == null) {
-            identifierManager = new IdentifierManager(root);
+            identifierManager = identifierManagementProvider.getIdentifierManager(root);
         }
         return identifierManager;
     }

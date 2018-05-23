@@ -109,7 +109,7 @@ public class UserPrincipalProviderWithCacheTest extends AbstractPrincipalProvide
     }
 
     private PrincipalProvider createPrincipalProvider(Root root) {
-        return new UserPrincipalProvider(root, getUserConfiguration(), namePathMapper);
+        return new UserPrincipalProvider(root, getUserConfiguration(), namePathMapper, getIdentifierManagementProvider());
     }
 
     private ContentSession getSystemSession() throws Exception {

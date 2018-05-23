@@ -50,7 +50,7 @@ public class UserImporterMembershipIgnoreTest extends UserImporterBaseTest {
     public void before() throws Exception {
         super.before();
 
-        userProvider = new UserProvider(root, ConfigurationParameters.EMPTY);
+        userProvider = new UserProvider(root, ConfigurationParameters.EMPTY, getIdentifierManagementProvider());
         knownMemberContentId = userProvider.getContentID(testUser.getID());
         unknownContentId = userProvider.getContentID("member1");
 

@@ -18,6 +18,9 @@ package org.apache.jackrabbit.oak.spi.security.authorization.cug.impl;
 
 import javax.annotation.Nonnull;
 
+import org.apache.jackrabbit.oak.plugins.name.NamespaceManagementProviderService;
+import org.apache.jackrabbit.oak.plugins.nodetype.NodeTypeManagementProviderService;
+import org.apache.jackrabbit.oak.plugins.version.VersionManagementProviderService;
 import org.apache.jackrabbit.oak.security.authorization.composite.CompositeAuthorizationConfiguration;
 import org.apache.jackrabbit.oak.security.internal.SecurityProviderBuilder;
 import org.apache.jackrabbit.oak.security.internal.SecurityProviderHelper;
@@ -29,8 +32,10 @@ final class CugSecurityProvider {
 
     private CugSecurityProvider() {}
 
-    public static SecurityProvider newTestSecurityProvider(@Nonnull ConfigurationParameters configuration) {
-        CugConfiguration cugConfiguration = new CugConfiguration();
+    public static SecurityProvider newTestSecurityProvider(@Nonnull ConfigurationParameters configuration) {CugConfiguration cugConfiguration = new CugConfiguration();
+        cugConfiguration.bindNodeTypeManagementProvider(new NodeTypeManagementProviderService());
+        cugConfiguration.bindVersionManagementProvider(new VersionManagementProviderService());
+        cugConfiguration.bindNamespaceManagementProvider(new NamespaceManagementProviderService());
 
         ConfigurationParameters params = configuration.getConfigValue(AuthorizationConfiguration.NAME, ConfigurationParameters.EMPTY);
         cugConfiguration.setParameters(params);

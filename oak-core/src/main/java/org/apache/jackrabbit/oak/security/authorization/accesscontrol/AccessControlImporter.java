@@ -16,11 +16,14 @@
  */
 package org.apache.jackrabbit.oak.security.authorization.accesscontrol;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -41,7 +44,8 @@ import org.apache.jackrabbit.api.security.principal.PrincipalManager;
 import org.apache.jackrabbit.oak.api.Root;
 import org.apache.jackrabbit.oak.api.Tree;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
-import org.apache.jackrabbit.oak.plugins.nodetype.ReadOnlyNodeTypeManager;
+import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeManagementProvider;
+import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeManager;
 import org.apache.jackrabbit.oak.spi.security.SecurityProvider;
 import org.apache.jackrabbit.oak.spi.security.authorization.AuthorizationConfiguration;
 import org.apache.jackrabbit.oak.spi.security.authorization.accesscontrol.AccessControlConstants;
@@ -56,8 +60,6 @@ import org.apache.jackrabbit.oak.spi.xml.TextValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 /**
  * {@link ProtectedNodeImporter} implementation that handles access control lists,
  * entries and restrictions.
@@ -70,9 +72,11 @@ public class AccessControlImporter implements ProtectedNodeImporter, AccessContr
     private static final int CHILD_STATUS_ACE = 1;
     private static final int CHILD_STATUS_RESTRICTION = 2;
 
+    private final NodeTypeManagementProvider ntMgtProvider;
+
     private AccessControlManager acMgr;
     private PrincipalManager principalManager;
-    private ReadOnlyNodeTypeManager ntMgr;
+    private NodeTypeManager ntMgr;
 
     private boolean initialized = false;
     private int childStatus;
@@ -81,6 +85,10 @@ public class AccessControlImporter implements ProtectedNodeImporter, AccessContr
     private MutableEntry entry;
 
     private int importBehavior;
+
+    public AccessControlImporter(@Nonnull NodeTypeManagementProvider ntMgtProvider) {
+        this.ntMgtProvider = ntMgtProvider;
+    }
 
     //----------------------------------------------< ProtectedItemImporter >---
 
@@ -106,7 +114,7 @@ public class AccessControlImporter implements ProtectedNodeImporter, AccessContr
                 acMgr = session.getAccessControlManager();
                 principalManager = ((JackrabbitSession) session).getPrincipalManager();
             }
-            ntMgr = ReadOnlyNodeTypeManager.getInstance(root, namePathMapper);
+            ntMgr = ntMgtProvider.getReadOnlyNodeTypeManager(root, namePathMapper);
             initialized = true;
         } catch (RepositoryException e) {
             log.warn("Error while initializing access control importer", e);

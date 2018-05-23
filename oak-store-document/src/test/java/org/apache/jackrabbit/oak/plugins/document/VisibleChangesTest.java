@@ -22,7 +22,9 @@ import javax.annotation.Nonnull;
 
 import com.google.common.collect.Sets;
 import org.apache.jackrabbit.oak.api.CommitFailedException;
+import org.apache.jackrabbit.oak.nodetype.NodeTypeManagementProvider;
 import org.apache.jackrabbit.oak.plugins.document.memory.MemoryDocumentStore;
+import org.apache.jackrabbit.oak.plugins.nodetype.NodeTypeManagementProviderService;
 import org.apache.jackrabbit.oak.plugins.tree.RootProvider;
 import org.apache.jackrabbit.oak.plugins.tree.TreeProvider;
 import org.apache.jackrabbit.oak.plugins.tree.impl.RootProviderService;
@@ -34,6 +36,7 @@ import org.apache.jackrabbit.oak.spi.commit.EmptyHook;
 import org.apache.jackrabbit.oak.spi.mount.MountInfoProvider;
 import org.apache.jackrabbit.oak.spi.security.SecurityProvider;
 import org.apache.jackrabbit.oak.spi.state.NodeBuilder;
+import org.apache.jackrabbit.oak.version.VersionManagementProvider;
 import org.junit.Test;
 
 import static org.apache.jackrabbit.oak.plugins.document.TestUtils.persistToBranch;
@@ -88,6 +91,18 @@ public class VisibleChangesTest {
             @Override
             public RootProvider getRootProvider() {
                 return new RootProviderService();
+            }
+
+            @Nonnull
+            @Override
+            public NodeTypeManagementProvider getNodeTypeManagementProvider() {
+                return new NodeTypeManagementProviderService();
+            }
+
+            @Nonnull
+            @Override
+            public VersionManagementProvider getVersionManagementProvider() {
+                throw new UnsupportedOperationException();
             }
 
             @Nonnull

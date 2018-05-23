@@ -71,6 +71,10 @@ public class CugConfigurationOsgiTest extends AbstractSecurityTest {
 
         MountInfoProviderService mip = new MountInfoProviderService();
         context.registerInjectActivateService(mip);
+
+        context.registerInjectActivateService(getVersionManagementProvider());
+        context.registerInjectActivateService(getNodeTypeManagementProvider());
+        context.registerInjectActivateService(getNamespaceManagementProvider());
     }
 
     @Test(expected = ReferenceViolationException.class)

@@ -22,13 +22,14 @@ import java.util.Map;
 
 import javax.annotation.Nonnull;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.jackrabbit.oak.api.CommitFailedException;
 import org.apache.jackrabbit.oak.plugins.index.IndexEditorProvider;
 import org.apache.jackrabbit.oak.plugins.index.IndexUpdateProvider;
+import org.apache.jackrabbit.oak.plugins.nodetype.TypeEditorProvider;
 import org.apache.jackrabbit.oak.spi.commit.CommitContext;
 import org.apache.jackrabbit.oak.spi.commit.CommitHook;
 import org.apache.jackrabbit.oak.spi.commit.CommitInfo;
+import org.apache.jackrabbit.oak.spi.commit.CompositeEditorProvider;
 import org.apache.jackrabbit.oak.spi.commit.CompositeHook;
 import org.apache.jackrabbit.oak.spi.commit.EditorHook;
 import org.apache.jackrabbit.oak.spi.commit.ResetCommitAttributeHook;
@@ -37,6 +38,8 @@ import org.apache.jackrabbit.oak.spi.lifecycle.RepositoryInitializer;
 import org.apache.jackrabbit.oak.spi.lifecycle.WorkspaceInitializer;
 import org.apache.jackrabbit.oak.spi.state.NodeBuilder;
 import org.apache.jackrabbit.oak.spi.state.NodeStore;
+
+import com.google.common.collect.ImmutableMap;
 
 public final class OakInitializer {
 
@@ -51,7 +54,7 @@ public final class OakInitializer {
         try {
             NodeBuilder builder = store.getRoot().builder();
             initializer.initialize(builder);
-            store.merge(builder, createHook(indexEditor), createCommitInfo());
+            store.merge(builder, createHook(indexEditor, true), createCommitInfo());
         } catch (CommitFailedException e) {
             throw new RuntimeException(e);
         }
@@ -66,16 +69,26 @@ public final class OakInitializer {
             wspInit.initialize(builder, workspaceName);
         }
         try {
-            store.merge(builder, createHook(indexEditor), createCommitInfo());
+            store.merge(builder, createHook(indexEditor, false), createCommitInfo());
         } catch (CommitFailedException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private static CommitHook createHook(@Nonnull IndexEditorProvider indexEditor) {
-        return new CompositeHook(
-                        ResetCommitAttributeHook.INSTANCE,
-                        new EditorHook(new IndexUpdateProvider(indexEditor)));
+    private static CommitHook createHook(@Nonnull IndexEditorProvider indexEditor, boolean include) {
+
+        
+        if(include) {
+            return new CompositeHook(
+                    ResetCommitAttributeHook.INSTANCE,
+                    new EditorHook(new CompositeEditorProvider(new IndexUpdateProvider(indexEditor), new TypeEditorProvider(true))));
+            
+        } else {
+            return new CompositeHook(
+                    ResetCommitAttributeHook.INSTANCE,
+                    new EditorHook(new IndexUpdateProvider(indexEditor)));
+            
+        }
     }
 
     private static CommitInfo createCommitInfo(){

@@ -44,7 +44,7 @@ public class GroupImplTest extends AbstractSecurityTest {
     public void before() throws Exception {
         super.before();
 
-        uMgr = new UserManagerImpl(root, getNamePathMapper(), getSecurityProvider());
+        uMgr = new UserManagerImpl(root, getNamePathMapper(), getSecurityProvider(), getNodeTypeManagementProvider(), getIdentifierManagementProvider());
         Group g = uMgr.createGroup(groupId);
 
         group = new GroupImpl(groupId, root.getTree(g.getPath()), uMgr);

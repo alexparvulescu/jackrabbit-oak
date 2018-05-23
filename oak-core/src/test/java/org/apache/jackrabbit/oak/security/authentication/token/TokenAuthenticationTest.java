@@ -55,7 +55,8 @@ public class TokenAuthenticationTest extends AbstractSecurityTest {
         super.before();
         tokenProvider = new TokenProviderImpl(root,
                 ConfigurationParameters.EMPTY,
-                getUserConfiguration());
+                getUserConfiguration(),
+                getIdentifierManagementProvider());
 
         root.commit();
         authentication = new TokenAuthentication(tokenProvider);
@@ -131,7 +132,8 @@ public class TokenAuthenticationTest extends AbstractSecurityTest {
     public void testAuthenticateExpiredToken() throws Exception {
         TokenProvider tp = new TokenProviderImpl(root,
                 ConfigurationParameters.of(TokenProvider.PARAM_TOKEN_EXPIRATION, 1),
-                getUserConfiguration());
+                getUserConfiguration(),
+                getIdentifierManagementProvider());
 
         TokenInfo info = tp.createToken(userId, Collections.<String, Object>emptyMap());
         waitUntilExpired(info);

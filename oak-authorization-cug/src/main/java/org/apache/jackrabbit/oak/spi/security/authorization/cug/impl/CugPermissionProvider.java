@@ -19,11 +19,11 @@ package org.apache.jackrabbit.oak.spi.security.authorization.cug.impl;
 import java.security.Principal;
 import java.util.Collections;
 import java.util.Set;
+
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.google.common.collect.ImmutableSet;
 import org.apache.jackrabbit.JcrConstants;
 import org.apache.jackrabbit.oak.api.PropertyState;
 import org.apache.jackrabbit.oak.api.Root;
@@ -37,7 +37,6 @@ import org.apache.jackrabbit.oak.plugins.tree.TreeProvider;
 import org.apache.jackrabbit.oak.plugins.tree.TreeType;
 import org.apache.jackrabbit.oak.plugins.tree.TreeTypeProvider;
 import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
-import org.apache.jackrabbit.oak.plugins.version.ReadOnlyVersionManager;
 import org.apache.jackrabbit.oak.spi.security.Context;
 import org.apache.jackrabbit.oak.spi.security.authorization.permission.AggregatedPermissionProvider;
 import org.apache.jackrabbit.oak.spi.security.authorization.permission.Permissions;
@@ -47,6 +46,10 @@ import org.apache.jackrabbit.oak.spi.security.privilege.PrivilegeBits;
 import org.apache.jackrabbit.oak.spi.security.privilege.PrivilegeConstants;
 import org.apache.jackrabbit.oak.spi.state.NodeState;
 import org.apache.jackrabbit.oak.spi.state.NodeStateUtils;
+import org.apache.jackrabbit.oak.spi.version.VersionManagementProvider;
+import org.apache.jackrabbit.oak.spi.version.VersionManager;
+
+import com.google.common.collect.ImmutableSet;
 
 class CugPermissionProvider implements AggregatedPermissionProvider, CugConstants {
 
@@ -66,11 +69,12 @@ class CugPermissionProvider implements AggregatedPermissionProvider, CugConstant
     private final SupportedPaths supportedPaths;
 
     private Root immutableRoot;
-    private ReadOnlyVersionManager versionManager;
+    private VersionManager versionManager;
     private TopLevelPaths topPaths;
 
     private final RootProvider rootProvider;
     private final TreeProvider treeProvider;
+    private final VersionManagementProvider versionManagementProvider;
 
     CugPermissionProvider(@Nonnull Root root,
                           @Nonnull String workspaceName,
@@ -78,10 +82,12 @@ class CugPermissionProvider implements AggregatedPermissionProvider, CugConstant
                           @Nonnull Set<String> supportedPaths,
                           @Nonnull Context ctx,
                           @Nonnull RootProvider rootProvider,
-                          @Nonnull TreeProvider treeProvider) {
+                          @Nonnull TreeProvider treeProvider,
+                          @Nonnull VersionManagementProvider versionManagementProvider) {
         this.root = root;
         this.rootProvider = rootProvider;
         this.treeProvider = treeProvider;
+        this.versionManagementProvider = versionManagementProvider;
         this.workspaceName = workspaceName;
 
         immutableRoot = rootProvider.createReadOnlyRoot(root);
@@ -334,7 +340,7 @@ class CugPermissionProvider implements AggregatedPermissionProvider, CugConstant
     private Tree getCugRoot(@Nonnull Tree immutableTree, @Nonnull TreeType type) {
         Tree tree = immutableTree;
         String p = immutableTree.getPath();
-        if (TreeType.VERSION == type && !ReadOnlyVersionManager.isVersionStoreTree(tree)) {
+        if (TreeType.VERSION == type && !getVersionManager().isVersionStorageTree(tree)) {
             tree = getVersionManager().getVersionable(immutableTree, workspaceName);
             if (tree == null) {
                 return null;
@@ -394,7 +400,7 @@ class CugPermissionProvider implements AggregatedPermissionProvider, CugConstant
 
     @Nonnull
     private TreePermission createVersionPermission(@Nonnull Tree tree, @Nonnull TreeType type, @Nonnull TreePermission parent, boolean parentIsCugPermission) {
-        if (ReadOnlyVersionManager.isVersionStoreTree(tree)) {
+        if (getVersionManager().isVersionStorageTree(tree)) {
             if (parentIsCugPermission) {
                 return new CugTreePermission(tree, type, parent, this);
             } else {
@@ -446,9 +452,9 @@ class CugPermissionProvider implements AggregatedPermissionProvider, CugConstant
     }
 
     @Nonnull
-    private ReadOnlyVersionManager getVersionManager() {
+    private VersionManager getVersionManager() {
         if (versionManager == null) {
-            versionManager = ReadOnlyVersionManager.getInstance(immutableRoot, NamePathMapper.DEFAULT);
+            versionManager = versionManagementProvider.getReadOnlyVersionManager(immutableRoot, NamePathMapper.DEFAULT);
         }
         return versionManager;
     }

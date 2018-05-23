@@ -16,19 +16,25 @@
  */
 package org.apache.jackrabbit.oak.spi.security.authorization.cug.impl;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+
+import java.lang.reflect.Field;
 import java.security.Principal;
 import java.util.List;
 import java.util.Set;
+
 import javax.annotation.Nonnull;
 import javax.jcr.security.AccessControlManager;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
 import org.apache.jackrabbit.oak.spi.commit.CommitHook;
 import org.apache.jackrabbit.oak.spi.commit.MoveTracker;
 import org.apache.jackrabbit.oak.spi.commit.ValidatorProvider;
+import org.apache.jackrabbit.oak.spi.namespace.NamespaceManagementProvider;
+import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeManagementProvider;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationParameters;
 import org.apache.jackrabbit.oak.spi.security.SecurityProvider;
 import org.apache.jackrabbit.oak.spi.security.authorization.AuthorizationConfiguration;
@@ -39,12 +45,13 @@ import org.apache.jackrabbit.oak.spi.security.principal.AdminPrincipal;
 import org.apache.jackrabbit.oak.spi.security.principal.EveryonePrincipal;
 import org.apache.jackrabbit.oak.spi.security.principal.SystemPrincipal;
 import org.apache.jackrabbit.oak.spi.security.principal.SystemUserPrincipal;
+import org.apache.jackrabbit.oak.spi.version.VersionManagementProvider;
 import org.apache.jackrabbit.oak.spi.xml.ProtectedItemImporter;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 public class CugConfigurationTest extends AbstractCugTest {
 
@@ -217,8 +224,44 @@ public class CugConfigurationTest extends AbstractCugTest {
         assertSupportedPaths(cugConfiguration, "/changed");
     }
 
+    @Test
+    public void testBindVersionManagementProvider() throws Exception {
+        CugConfiguration cugConfiguration = new CugConfiguration();
+        assertNull(inspect(cugConfiguration, "versionManagementProvider"));
+        cugConfiguration.bindVersionManagementProvider(getVersionManagementProvider());
+        assertTrue(inspect(cugConfiguration, "versionManagementProvider") instanceof VersionManagementProvider);
+        cugConfiguration.unbindVersionManagementProvider(getVersionManagementProvider());
+        assertNull(inspect(cugConfiguration, "versionManagementProvider"));
+    }
+
+    @Test
+    public void testBindNodeTypeManagementProvider() throws Exception {
+        CugConfiguration cugConfiguration = new CugConfiguration();
+        assertNull(inspect(cugConfiguration, "nodeTypeManagementProvider"));
+        cugConfiguration.bindNodeTypeManagementProvider(getNodeTypeManagementProvider());
+        assertTrue(inspect(cugConfiguration, "nodeTypeManagementProvider") instanceof NodeTypeManagementProvider);
+        cugConfiguration.unbindNodeTypeManagementProvider(getNodeTypeManagementProvider());
+        assertNull(inspect(cugConfiguration, "nodeTypeManagementProvider"));
+    }
+
+    @Test
+    public void testBindNamespaceManagementProvider() throws Exception {
+        CugConfiguration cugConfiguration = new CugConfiguration();
+        assertNull(inspect(cugConfiguration, "namespaceManagementProvider"));
+        cugConfiguration.bindNamespaceManagementProvider(getNamespaceManagementProvider());
+        assertTrue(inspect(cugConfiguration, "namespaceManagementProvider") instanceof NamespaceManagementProvider);
+        cugConfiguration.unbindNamespaceManagementProvider(getNamespaceManagementProvider());
+        assertNull(inspect(cugConfiguration, "namespaceManagementProvider"));
+    }
+
     private static void assertSupportedPaths(@Nonnull CugConfiguration configuration, @Nonnull String... paths) throws Exception {
         Set<String> expected = ImmutableSet.copyOf(paths);
         assertEquals(expected, configuration.getParameters().getConfigValue(CugConstants.PARAM_CUG_SUPPORTED_PATHS, ImmutableSet.of()));
+    }
+
+    private static Object inspect(@Nonnull CugConfiguration cugConfiguration, @Nonnull String name) throws Exception {
+        Field f = CugConfiguration.class.getDeclaredField(name);
+        f.setAccessible(true);
+        return f.get(cugConfiguration);
     }
 }

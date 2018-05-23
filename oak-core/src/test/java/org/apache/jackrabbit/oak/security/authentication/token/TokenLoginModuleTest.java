@@ -181,7 +181,7 @@ public class TokenLoginModuleTest extends AbstractSecurityTest {
 
     @Test
     public void testTokenProviderCallback() throws Exception {
-        TokenProvider tp = new TokenProviderImpl(root, ConfigurationParameters.EMPTY, getUserConfiguration());
+        TokenProvider tp = new TokenProviderImpl(root, ConfigurationParameters.EMPTY, getUserConfiguration(), getIdentifierManagementProvider());
 
         TokenLoginModule lm = new TokenLoginModule();
         lm.initialize(new Subject(), new TestCallbackHandler(tp), ImmutableMap.<String, Object>of(), ImmutableMap.<String, Object>of());

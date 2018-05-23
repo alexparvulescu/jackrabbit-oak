@@ -29,8 +29,10 @@ import static org.apache.jackrabbit.oak.plugins.memory.EmptyNodeState.EMPTY_NODE
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.function.Predicate;
+
 import org.apache.jackrabbit.oak.api.Type;
-import org.apache.jackrabbit.oak.plugins.nodetype.TypePredicate;
+import org.apache.jackrabbit.oak.spi.nodetype.predicates.TypePredicates;
 import org.apache.jackrabbit.oak.spi.state.NodeState;
 import org.junit.Test;
 
@@ -39,38 +41,38 @@ public class NodeTypePredicateTest {
     @Test
     public void emptyNodeTypeList() {
         NodeState node = createNodeOfType(NT_BASE);
-        TypePredicate p = new TypePredicate(node, new String[] {});
-        assertFalse(p.apply(node));
+        Predicate<NodeState> p = TypePredicates.getNodeTypePredicate(node, new String[] {});
+        assertFalse(p.test(node));
     }
 
     @Test
     public void singleNodeTypeMatch() {
         NodeState node = createNodeOfType(NT_BASE);
-        TypePredicate p = new TypePredicate(node, new String[] {NT_BASE});
-        assertTrue(p.apply(node));
+        Predicate<NodeState> p = TypePredicates.getNodeTypePredicate(node, new String[] {NT_BASE});
+        assertTrue(p.test(node));
     }
 
     @Test
     public void singleNodeTypeMiss() {
         NodeState node = createNodeOfType(NT_BASE);
-        TypePredicate p = new TypePredicate(node, new String[] {NT_FILE});
-        assertFalse(p.apply(node));
+        Predicate<NodeState> p = TypePredicates.getNodeTypePredicate(node, new String[] {NT_FILE});
+        assertFalse(p.test(node));
     }
 
     @Test
     public void multipleNodeTypesMatch() {
         NodeState node = createNodeOfType(NT_FILE);
-        TypePredicate p = new TypePredicate(node,
+        Predicate<NodeState> p = TypePredicates.getNodeTypePredicate(node,
                 new String[] { NT_FOLDER, NT_RESOURCE, NT_FILE });
-        assertTrue(p.apply(node));
+        assertTrue(p.test(node));
     }
 
     @Test
     public void multipleNodeTypesMiss() {
         NodeState node = createNodeOfType(NT_FILE);
-        TypePredicate p = new TypePredicate(node,
+        Predicate<NodeState> p = TypePredicates.getNodeTypePredicate(node,
                 new String[] { NT_FOLDER, NT_RESOURCE, JCR_CONTENT });
-        assertFalse(p.apply(node));
+        assertFalse(p.test(node));
     }
 
     private static NodeState createNodeOfType(String ntName) {

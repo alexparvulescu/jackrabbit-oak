@@ -37,7 +37,7 @@ public class PolicyOwnerImplTest extends AbstractAccessControlTest {
     public void before() throws Exception {
         super.before();
 
-        acMgr = new AccessControlManagerImpl(root, getNamePathMapper(), getSecurityProvider());
+        acMgr = new AccessControlManagerImpl(root, getNamePathMapper(), getSecurityProvider(), getNodeTypeManagementProvider());
 
         AccessControlList policy = AccessControlUtils.getAccessControlList(acMgr, TEST_PATH);
         policy.addAccessControlEntry(testPrincipal, testPrivileges);

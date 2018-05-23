@@ -35,9 +35,9 @@ import org.apache.jackrabbit.oak.api.Tree;
 import org.apache.jackrabbit.oak.commons.PathUtils;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
 import org.apache.jackrabbit.oak.plugins.memory.PropertyStates;
-import org.apache.jackrabbit.oak.plugins.nodetype.ReadOnlyNodeTypeManager;
 import org.apache.jackrabbit.oak.plugins.tree.TreeLocation;
 import org.apache.jackrabbit.oak.plugins.value.jcr.ValueFactoryImpl;
+import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeManager;
 import org.apache.jackrabbit.oak.spi.security.user.UserConstants;
 import org.apache.jackrabbit.util.Text;
 import org.slf4j.Logger;
@@ -233,7 +233,7 @@ class AuthorizablePropertiesImpl implements AuthorizableProperties {
             log.debug("Unable to determine definition of authorizable property at " + propertyLocation.getPath());
             return null;
         }
-        ReadOnlyNodeTypeManager nodeTypeManager = authorizable.getUserManager().getNodeTypeManager();
+        NodeTypeManager nodeTypeManager = authorizable.getUserManager().getNodeTypeManager();
         PropertyDefinition def = nodeTypeManager.getDefinition(parent, property, true);
         if (def.isProtected() || (authorizablePath.equals(parent.getPath())
                 && !def.getDeclaringNodeType().isNodeType(UserConstants.NT_REP_AUTHORIZABLE))) {
@@ -244,7 +244,7 @@ class AuthorizablePropertiesImpl implements AuthorizableProperties {
     }
 
     private void checkProtectedProperty(@Nonnull Tree parent, @Nonnull PropertyState property) throws RepositoryException {
-        ReadOnlyNodeTypeManager nodeTypeManager = authorizable.getUserManager().getNodeTypeManager();
+        NodeTypeManager nodeTypeManager = authorizable.getUserManager().getNodeTypeManager();
         PropertyDefinition def = nodeTypeManager.getDefinition(parent, property, false);
         if (def.isProtected()) {
             throw new ConstraintViolationException(

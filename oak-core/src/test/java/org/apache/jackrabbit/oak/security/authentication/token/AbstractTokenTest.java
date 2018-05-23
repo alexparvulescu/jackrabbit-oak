@@ -44,7 +44,8 @@ public abstract class AbstractTokenTest extends AbstractSecurityTest implements 
         root = adminSession.getLatestRoot();
         tokenProvider = new TokenProviderImpl(root,
                 getTokenConfig(),
-                getUserConfiguration());
+                getUserConfiguration(),
+                getIdentifierManagementProvider());
     }
 
     @Override

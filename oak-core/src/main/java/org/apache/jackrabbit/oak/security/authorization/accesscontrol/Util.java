@@ -18,6 +18,7 @@ package org.apache.jackrabbit.oak.security.authorization.accesscontrol;
 
 import java.security.Principal;
 import java.util.Set;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.jcr.security.AccessControlException;
@@ -25,7 +26,7 @@ import javax.jcr.security.AccessControlPolicy;
 
 import org.apache.jackrabbit.api.security.principal.PrincipalManager;
 import org.apache.jackrabbit.oak.api.Tree;
-import org.apache.jackrabbit.oak.plugins.nodetype.ReadOnlyNodeTypeManager;
+import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeManager;
 import org.apache.jackrabbit.oak.spi.security.authorization.AuthorizationConfiguration;
 import org.apache.jackrabbit.oak.spi.security.authorization.accesscontrol.ACE;
 import org.apache.jackrabbit.oak.spi.security.authorization.accesscontrol.AccessControlConstants;
@@ -94,12 +95,12 @@ final class Util implements AccessControlConstants {
     }
 
     public static boolean isAccessControlled(@Nullable String oakPath, @Nonnull Tree tree,
-                                             @Nonnull ReadOnlyNodeTypeManager ntMgr) {
+                                             @Nonnull NodeTypeManager ntMgr) {
         String mixinName = getMixinName(oakPath);
         return ntMgr.isNodeType(tree, mixinName);
     }
 
-    public static boolean isACE(@Nonnull Tree tree, @Nonnull ReadOnlyNodeTypeManager ntMgr) {
+    public static boolean isACE(@Nonnull Tree tree, @Nonnull NodeTypeManager ntMgr) {
         return tree.exists() && ntMgr.isNodeType(tree, NT_REP_ACE);
     }
 

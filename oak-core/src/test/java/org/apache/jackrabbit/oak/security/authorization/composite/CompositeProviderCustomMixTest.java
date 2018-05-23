@@ -233,7 +233,7 @@ public class CompositeProviderCustomMixTest extends AbstractSecurityTest {
         return new CompositePermissionProvider(root, composite, config.getContext(), type, getRootProvider(), getTreeProvider());
     }
 
-    private static class CustomProvider implements AggregatedPermissionProvider {
+    private static final class CustomProvider implements AggregatedPermissionProvider {
 
         private final PrivilegeBitsProvider pbp;
 

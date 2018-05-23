@@ -14,19 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.jackrabbit.oak.plugins.nodetype;
-
-import java.util.Arrays;
-import java.util.Set;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import org.apache.jackrabbit.oak.api.Tree;
-import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
-import org.apache.jackrabbit.oak.spi.state.ChildNodeEntry;
-import org.apache.jackrabbit.oak.spi.state.NodeState;
+package org.apache.jackrabbit.oak.spi.nodetype.predicates;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Predicates.in;
@@ -41,6 +29,18 @@ import static org.apache.jackrabbit.JcrConstants.JCR_SYSTEM;
 import static org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants.JCR_NODE_TYPES;
 import static org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants.REP_MIXIN_SUBTYPES;
 import static org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants.REP_PRIMARY_SUBTYPES;
+
+import java.util.Arrays;
+import java.util.Set;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import org.apache.jackrabbit.oak.spi.state.ChildNodeEntry;
+import org.apache.jackrabbit.oak.spi.state.NodeState;
+
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 
 /**
  * Inheritance-aware node type predicate for {@link NodeState node states}.
@@ -166,20 +166,20 @@ class TypePredicate implements Predicate<NodeState>, java.util.function.Predicat
         return false;
     }
 
-    public boolean apply(@Nullable Tree input) {
-        if (input != null) {
-            init();
-            if (primaryTypes != null
-                    && primaryTypes.contains(TreeUtil.getPrimaryTypeName(input))) {
-                return true;
-            }
-            if (mixinTypes != null
-                    && any(TreeUtil.getNames(input, JCR_MIXINTYPES), in(mixinTypes))) {
-                return true;
-            }
-        }
-        return false;
-    }
+//    public boolean apply(@Nullable Tree input) {
+//        if (input != null) {
+//            init();
+//            if (primaryTypes != null
+//                    && primaryTypes.contains(TreeUtil.getPrimaryTypeName(input))) {
+//                return true;
+//            }
+//            if (mixinTypes != null
+//                    && any(TreeUtil.getNames(input, JCR_MIXINTYPES), in(mixinTypes))) {
+//                return true;
+//            }
+//        }
+//        return false;
+//    }
 
     //---------------------------------------------------------< Predicate >--
 

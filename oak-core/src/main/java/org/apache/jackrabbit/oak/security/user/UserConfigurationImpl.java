@@ -25,7 +25,6 @@ import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.jackrabbit.api.security.user.UserManager;
 import org.apache.jackrabbit.oak.api.Root;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
@@ -33,7 +32,9 @@ import org.apache.jackrabbit.oak.security.user.autosave.AutoSaveEnabledManager;
 import org.apache.jackrabbit.oak.spi.commit.MoveTracker;
 import org.apache.jackrabbit.oak.spi.commit.ThreeWayConflictHandler;
 import org.apache.jackrabbit.oak.spi.commit.ValidatorProvider;
+import org.apache.jackrabbit.oak.spi.identifier.IdentifierManagementProvider;
 import org.apache.jackrabbit.oak.spi.lifecycle.WorkspaceInitializer;
+import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeManagementProvider;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationBase;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationParameters;
 import org.apache.jackrabbit.oak.spi.security.Context;
@@ -48,10 +49,14 @@ import org.apache.jackrabbit.oak.spi.xml.ImportBehavior;
 import org.apache.jackrabbit.oak.spi.xml.ProtectedItemImporter;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import org.osgi.service.metatype.annotations.Option;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * Default implementation of the {@link UserConfiguration}.
@@ -158,6 +163,9 @@ public class UserConfigurationImpl extends ConfigurationBase implements UserConf
 
     private static final UserAuthenticationFactory DEFAULT_AUTH_FACTORY = new UserAuthenticationFactoryImpl();
 
+    private NodeTypeManagementProvider nodeTypeManagementProvider;
+    private IdentifierManagementProvider identifierManagementProvider;
+
     public UserConfigurationImpl() {
         super();
     }
@@ -175,6 +183,24 @@ public class UserConfigurationImpl extends ConfigurationBase implements UserConf
     // reference to @Configuration class needed for correct DS xml generation
     private void activate(Configuration configuration, Map<String, Object> properties) {
         setParameters(ConfigurationParameters.of(properties));
+    }
+
+    @Reference(name = "nodeTypeManagementProvider", cardinality = ReferenceCardinality.MANDATORY)
+    public void bindNodeTypeManagementProvider(NodeTypeManagementProvider nodeTypeManagementProvider) {
+        this.nodeTypeManagementProvider = nodeTypeManagementProvider;
+    }
+
+    public void unbindNodeTypeManagementProvider(NodeTypeManagementProvider nodeTypeManagementProvider) {
+        this.nodeTypeManagementProvider = null;
+    }
+
+    @Reference(name = "identifierManagementProvider", cardinality = ReferenceCardinality.MANDATORY)
+    public void bindIdentifierManagementProvider(IdentifierManagementProvider identifierManagementProvider) {
+        this.identifierManagementProvider = identifierManagementProvider;
+    }
+
+    public void unbindIdentifierManagementProvider(IdentifierManagementProvider identifierManagementProvider) {
+        this.identifierManagementProvider = null;
     }
 
     //----------------------------------------------< SecurityConfiguration >---
@@ -206,7 +232,7 @@ public class UserConfigurationImpl extends ConfigurationBase implements UserConf
     @Nonnull
     @Override
     public List<? extends ValidatorProvider> getValidators(@Nonnull String workspaceName, @Nonnull Set<Principal> principals, @Nonnull MoveTracker moveTracker) {
-        return ImmutableList.of(new UserValidatorProvider(getParameters(), getRootProvider(), getTreeProvider()), new CacheValidatorProvider(principals, getTreeProvider()));
+        return ImmutableList.of(new UserValidatorProvider(getParameters(), getRootProvider(), getTreeProvider(), identifierManagementProvider), new CacheValidatorProvider(principals));
     }
 
     @Nonnull
@@ -218,7 +244,7 @@ public class UserConfigurationImpl extends ConfigurationBase implements UserConf
     @Nonnull
     @Override
     public List<ProtectedItemImporter> getProtectedItemImporters() {
-        return Collections.<ProtectedItemImporter>singletonList(new UserImporter(getParameters()));
+        return Collections.<ProtectedItemImporter>singletonList(new UserImporter(getParameters(), nodeTypeManagementProvider, identifierManagementProvider));
     }
 
     @Nonnull
@@ -231,7 +257,7 @@ public class UserConfigurationImpl extends ConfigurationBase implements UserConf
     @Nonnull
     @Override
     public UserManager getUserManager(Root root, NamePathMapper namePathMapper) {
-        UserManager umgr = new UserManagerImpl(root, namePathMapper, getSecurityProvider());
+        UserManager umgr = new UserManagerImpl(root, namePathMapper, getSecurityProvider(), nodeTypeManagementProvider, identifierManagementProvider);
         if (getParameters().getConfigValue(UserConstants.PARAM_SUPPORT_AUTOSAVE, false)) {
             return new AutoSaveEnabledManager(umgr, root);
         } else {
@@ -242,6 +268,6 @@ public class UserConfigurationImpl extends ConfigurationBase implements UserConf
     @Nullable
     @Override
     public PrincipalProvider getUserPrincipalProvider(@Nonnull Root root, @Nonnull NamePathMapper namePathMapper) {
-        return new UserPrincipalProvider(root, this, namePathMapper);
+        return new UserPrincipalProvider(root, this, namePathMapper, identifierManagementProvider);
     }
 }

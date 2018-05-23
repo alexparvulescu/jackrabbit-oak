@@ -56,6 +56,8 @@ public class CompositeAuthorizationConfigurationTest extends AbstractSecurityTes
         AuthorizationConfigurationImpl ac = new AuthorizationConfigurationImpl(getSecurityProvider());
         ac.setRootProvider(getRootProvider());
         ac.setTreeProvider(getTreeProvider());
+        ac.bindNodeTypeManagementProvider(getNodeTypeManagementProvider());
+        ac.bindVersionManagementProvider(getVersionManagementProvider());
         return ac;
     }
 

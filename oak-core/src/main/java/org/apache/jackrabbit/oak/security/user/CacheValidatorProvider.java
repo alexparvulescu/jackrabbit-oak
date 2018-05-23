@@ -20,24 +20,21 @@ import java.security.Principal;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
+
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 import org.apache.jackrabbit.oak.api.CommitFailedException;
 import org.apache.jackrabbit.oak.api.PropertyState;
-import org.apache.jackrabbit.oak.api.Tree;
-import org.apache.jackrabbit.oak.plugins.nodetype.TypePredicate;
-import org.apache.jackrabbit.oak.plugins.tree.TreeProvider;
 import org.apache.jackrabbit.oak.spi.commit.CommitInfo;
 import org.apache.jackrabbit.oak.spi.commit.DefaultValidator;
 import org.apache.jackrabbit.oak.spi.commit.Validator;
 import org.apache.jackrabbit.oak.spi.commit.ValidatorProvider;
 import org.apache.jackrabbit.oak.spi.commit.VisibleValidator;
+import org.apache.jackrabbit.oak.spi.nodetype.predicates.TypePredicates;
 import org.apache.jackrabbit.oak.spi.security.principal.SystemPrincipal;
 import org.apache.jackrabbit.oak.spi.state.NodeState;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Validator provider to ensure that the principal-cache stored with a given
@@ -47,20 +44,18 @@ import static com.google.common.base.Preconditions.checkNotNull;
 class CacheValidatorProvider extends ValidatorProvider implements CacheConstants {
 
     private final boolean isSystem;
-    private final TreeProvider treeProvider;
 
-    CacheValidatorProvider(@Nonnull Set<Principal> principals, @Nonnull TreeProvider treeProvider) {
+    CacheValidatorProvider(@Nonnull Set<Principal> principals) {
         super();
         isSystem = principals.contains(SystemPrincipal.INSTANCE);
-        this.treeProvider = treeProvider;
     }
 
     @CheckForNull
     @Override
     protected Validator getRootValidator(NodeState before, NodeState after, CommitInfo info) {
-        TypePredicate cachePredicate = new TypePredicate(after, NT_REP_CACHE);
+        Predicate<NodeState> cachePredicate = TypePredicates.getNodeTypePredicate(after, NT_REP_CACHE);
         boolean isValidCommitInfo = CommitMarker.isValidCommitInfo(info);
-        return new CacheValidator(treeProvider.createReadOnlyTree(before), treeProvider.createReadOnlyTree(after), cachePredicate, isValidCommitInfo);
+        return new CacheValidator(after, "", cachePredicate, isValidCommitInfo);
     }
 
     //--------------------------------------------------------------------------
@@ -89,22 +84,16 @@ class CacheValidatorProvider extends ValidatorProvider implements CacheConstants
     //-----------------------------------------------------< CacheValidator >---
     private final class CacheValidator extends DefaultValidator {
 
-        private final Tree parentBefore;
-        private final Tree parentAfter;
-
-        private final TypePredicate cachePredicate;
+        private final Predicate<NodeState> cachePredicate;
         private final boolean isValidCommitInfo;
 
         private final boolean isCache;
 
-        private CacheValidator(@Nullable Tree parentBefore, @Nonnull Tree parentAfter, TypePredicate cachePredicate, boolean isValidCommitInfo) {
-            this.parentBefore = parentBefore;
-            this.parentAfter = parentAfter;
-
+        private CacheValidator(@Nonnull NodeState parentAfter, @Nonnull String name, Predicate<NodeState> cachePredicate, boolean isValidCommitInfo) {
             this.cachePredicate = cachePredicate;
             this.isValidCommitInfo = isValidCommitInfo;
 
-            isCache = isCache(parentAfter);
+            isCache = isCache(parentAfter, name);
         }
 
         @Override
@@ -123,27 +112,23 @@ class CacheValidatorProvider extends ValidatorProvider implements CacheConstants
 
         @Override
         public Validator childNodeChanged(String name, NodeState before, NodeState after) throws CommitFailedException {
-            Tree beforeTree = (parentBefore == null) ? null : parentBefore.getChild(name);
-            Tree afterTree = parentAfter.getChild(name);
-
-            if (isCache || isCache(beforeTree) || isCache(afterTree)) {
+            if (isCache || isCache(before, name) || isCache(after, name)) {
                 checkValidCommit();
             }
 
-            return new VisibleValidator(new CacheValidator(beforeTree, afterTree, cachePredicate, isValidCommitInfo), true, true);
+            return new VisibleValidator(new CacheValidator(after, name, cachePredicate, isValidCommitInfo), true, true);
         }
 
         @Override
         public Validator childNodeAdded(String name, NodeState after) throws CommitFailedException {
-            Tree tree = checkNotNull(parentAfter.getChild(name));
-            if (isCache || isCache(tree)) {
+            if (isCache || isCache(after, name)) {
                 checkValidCommit();
             }
-            return new VisibleValidator(new CacheValidator(null, tree, cachePredicate, isValidCommitInfo), true, true);
+            return new VisibleValidator(new CacheValidator(after, name, cachePredicate, isValidCommitInfo), true, true);
         }
 
-        private boolean isCache(@CheckForNull Tree tree) {
-            return tree != null && (REP_CACHE.equals(tree.getName()) || cachePredicate.apply(tree));
+        private boolean isCache(@CheckForNull NodeState tree, @Nonnull String name) {
+            return tree != null && (REP_CACHE.equals(name) || cachePredicate.test(tree));
         }
 
         private void checkValidCommit() throws CommitFailedException {

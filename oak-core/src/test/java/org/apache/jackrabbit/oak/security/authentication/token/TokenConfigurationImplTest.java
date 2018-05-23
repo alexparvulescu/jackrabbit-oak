@@ -41,6 +41,7 @@ public class TokenConfigurationImplTest extends AbstractSecurityTest {
         super.before();
         tc = new TokenConfigurationImpl(getSecurityProvider());
         tc.setTreeProvider(getTreeProvider());
+        tc.bindIdentifierManagementProvider(getIdentifierManagementProvider());
     }
 
     @Override

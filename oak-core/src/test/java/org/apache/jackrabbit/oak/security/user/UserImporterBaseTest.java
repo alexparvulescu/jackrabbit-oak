@@ -84,7 +84,7 @@ public abstract class UserImporterBaseTest extends AbstractSecurityTest implemen
         super.before();
 
         testUser = getTestUser();
-        importer = new UserImporter(getImportConfig());
+        importer = new UserImporter(getImportConfig(), getNodeTypeManagementProvider(), getIdentifierManagementProvider());
     }
 
     @Override
@@ -103,6 +103,10 @@ public abstract class UserImporterBaseTest extends AbstractSecurityTest implemen
 
     String getImportBehavior() {
         return ImportBehavior.NAME_IGNORE;
+    }
+
+    UserProvider createUserProvider(@Nonnull Root root, @Nonnull ConfigurationParameters params) {
+        return new UserProvider(root, params, getIdentifierManagementProvider());
     }
 
     @Override
@@ -139,7 +143,7 @@ public abstract class UserImporterBaseTest extends AbstractSecurityTest implemen
         Tree folder = root.getTree(getUserConfiguration().getParameters().getConfigValue(PARAM_USER_PATH, DEFAULT_USER_PATH));
         Tree userTree = folder.addChild("userTree");
         userTree.setProperty(JcrConstants.JCR_PRIMARYTYPE, NT_REP_USER, Type.NAME);
-        userTree.setProperty(JcrConstants.JCR_UUID, new UserProvider(root, ConfigurationParameters.EMPTY).getContentID(TEST_USER_ID));
+        userTree.setProperty(JcrConstants.JCR_UUID, createUserProvider(root, ConfigurationParameters.EMPTY).getContentID(TEST_USER_ID));
         return userTree;
     }
 
@@ -147,7 +151,7 @@ public abstract class UserImporterBaseTest extends AbstractSecurityTest implemen
         Tree folder = root.getTree(getUserConfiguration().getParameters().getConfigValue(PARAM_USER_PATH, DEFAULT_USER_PATH));
         Tree userTree = folder.addChild("systemUserTree");
         userTree.setProperty(JcrConstants.JCR_PRIMARYTYPE, NT_REP_SYSTEM_USER, Type.NAME);
-        userTree.setProperty(JcrConstants.JCR_UUID, new UserProvider(root, ConfigurationParameters.EMPTY).getContentID(TEST_USER_ID));
+        userTree.setProperty(JcrConstants.JCR_UUID, createUserProvider(root, ConfigurationParameters.EMPTY).getContentID(TEST_USER_ID));
         return userTree;
     }
 
@@ -158,7 +162,7 @@ public abstract class UserImporterBaseTest extends AbstractSecurityTest implemen
         NodeUtil groupRoot = node.getOrAddTree(PathUtils.relativize(PathUtils.ROOT_PATH, groupPath), NT_REP_AUTHORIZABLE_FOLDER);
 
         Tree groupTree = groupRoot.addChild("testGroup", NT_REP_GROUP).getTree();
-        groupTree.setProperty(JcrConstants.JCR_UUID, new UserProvider(root, ConfigurationParameters.EMPTY).getContentID(TEST_GROUP_ID));
+        groupTree.setProperty(JcrConstants.JCR_UUID, createUserProvider(root, ConfigurationParameters.EMPTY).getContentID(TEST_GROUP_ID));
         return groupTree;
     }
 

@@ -22,10 +22,13 @@ import static org.apache.jackrabbit.oak.spi.security.ConfigurationParameters.EMP
 
 import javax.annotation.Nonnull;
 
+import org.apache.jackrabbit.oak.plugins.identifier.IdentifierManagementProviderService;
+import org.apache.jackrabbit.oak.plugins.nodetype.NodeTypeManagementProviderService;
 import org.apache.jackrabbit.oak.plugins.tree.RootProvider;
 import org.apache.jackrabbit.oak.plugins.tree.TreeProvider;
 import org.apache.jackrabbit.oak.plugins.tree.impl.RootProviderService;
 import org.apache.jackrabbit.oak.plugins.tree.impl.TreeProviderService;
+import org.apache.jackrabbit.oak.plugins.version.VersionManagementProviderService;
 import org.apache.jackrabbit.oak.security.authentication.AuthenticationConfigurationImpl;
 import org.apache.jackrabbit.oak.security.authentication.token.TokenConfigurationImpl;
 import org.apache.jackrabbit.oak.security.authorization.AuthorizationConfigurationImpl;
@@ -34,6 +37,8 @@ import org.apache.jackrabbit.oak.security.authorization.restriction.RestrictionP
 import org.apache.jackrabbit.oak.security.principal.PrincipalConfigurationImpl;
 import org.apache.jackrabbit.oak.security.privilege.PrivilegeConfigurationImpl;
 import org.apache.jackrabbit.oak.security.user.UserConfigurationImpl;
+import org.apache.jackrabbit.oak.spi.identifier.IdentifierManagementProvider;
+import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeManagementProvider;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationParameters;
 import org.apache.jackrabbit.oak.spi.security.SecurityProvider;
 import org.apache.jackrabbit.oak.spi.security.authentication.AuthenticationConfiguration;
@@ -51,6 +56,7 @@ import org.apache.jackrabbit.oak.spi.security.user.UserConfiguration;
 import org.apache.jackrabbit.oak.spi.security.user.UserConstants;
 import org.apache.jackrabbit.oak.spi.security.user.action.AuthorizableActionProvider;
 import org.apache.jackrabbit.oak.spi.security.user.action.DefaultAuthorizableActionProvider;
+import org.apache.jackrabbit.oak.spi.version.VersionManagementProvider;
 import org.apache.jackrabbit.oak.spi.whiteboard.Whiteboard;
 
 public final class SecurityProviderBuilder {
@@ -58,6 +64,10 @@ public final class SecurityProviderBuilder {
     private Whiteboard whiteboard;
     private RootProvider rootProvider;
     private TreeProvider treeProvider;
+
+    private VersionManagementProvider versionManagementProvider;
+    private NodeTypeManagementProvider nodeTypeManagementProvider;
+    private IdentifierManagementProvider identifierManagementProvider;
 
     private ConfigurationParameters authenticationParams = EMPTY;
     private AuthenticationConfiguration authenticationConfiguration;
@@ -160,6 +170,18 @@ public final class SecurityProviderBuilder {
             treeProvider = new TreeProviderService();
         }
 
+        if (nodeTypeManagementProvider == null) {
+            nodeTypeManagementProvider = new NodeTypeManagementProviderService();
+        }
+
+        if (versionManagementProvider == null) {
+            versionManagementProvider = new VersionManagementProviderService();
+        }
+
+        if (identifierManagementProvider == null) {
+            identifierManagementProvider = new IdentifierManagementProviderService();
+        }
+
         // authentication
         if (authenticationConfiguration == null) {
             authenticationConfiguration = new AuthenticationConfigurationImpl();
@@ -176,7 +198,10 @@ public final class SecurityProviderBuilder {
 
         // user
         if (userConfiguration == null) {
-            userConfiguration = new UserConfigurationImpl();
+            UserConfigurationImpl uc = new UserConfigurationImpl();
+            uc.bindNodeTypeManagementProvider(nodeTypeManagementProvider);
+            uc.bindIdentifierManagementProvider(identifierManagementProvider);
+            userConfiguration = uc;
         }
         securityProvider.setUserConfiguration(
                 initializeConfiguration(userConfiguration, securityProvider, userParams, rootProvider, treeProvider));
@@ -185,8 +210,12 @@ public final class SecurityProviderBuilder {
         if (authorizationConfiguration == null) {
             CompositeAuthorizationConfiguration ac = new CompositeAuthorizationConfiguration();
             ac.withCompositionType(configuration.getConfigValue("authorizationCompositionType", CompositeAuthorizationConfiguration.CompositionType.AND.toString()));
-            ac.setDefaultConfig(initializeConfiguration(new AuthorizationConfigurationImpl(),
-                    securityProvider, rootProvider, treeProvider));
+
+            AuthorizationConfigurationImpl defaultConfig = new AuthorizationConfigurationImpl();
+            defaultConfig.bindVersionManagementProvider(versionManagementProvider);
+            defaultConfig.bindNodeTypeManagementProvider(nodeTypeManagementProvider);
+
+            ac.setDefaultConfig(initializeConfiguration(defaultConfig, securityProvider, rootProvider, treeProvider));
             authorizationConfiguration = ac;
         }
 
@@ -214,7 +243,11 @@ public final class SecurityProviderBuilder {
         // token
         if (tokenConfiguration == null) {
             CompositeTokenConfiguration tc = new CompositeTokenConfiguration();
-            tc.setDefaultConfig(initializeConfiguration(new TokenConfigurationImpl(), securityProvider, rootProvider, treeProvider));
+
+            TokenConfigurationImpl defaultTokenConfiguration = new TokenConfigurationImpl();
+            defaultTokenConfiguration.bindIdentifierManagementProvider(identifierManagementProvider);
+
+            tc.setDefaultConfig(initializeConfiguration(defaultTokenConfiguration, securityProvider, rootProvider, treeProvider));
             tokenConfiguration = tc;
         }
 
@@ -248,4 +281,18 @@ public final class SecurityProviderBuilder {
         return this;
     }
 
+    public SecurityProviderBuilder withVersionManagementProvider(@Nonnull VersionManagementProvider versionManagementProvider) {
+        this.versionManagementProvider = versionManagementProvider;
+        return this;
+    }
+
+    public SecurityProviderBuilder withNodeTypeMangementProvider(@Nonnull NodeTypeManagementProvider nodeTypeManagementProvider) {
+        this.nodeTypeManagementProvider = nodeTypeManagementProvider;
+        return this;
+    }
+
+    public SecurityProviderBuilder withIdentifierManagementProvider(@Nonnull IdentifierManagementProvider identifierManagementProvider) {
+        this.identifierManagementProvider = identifierManagementProvider;
+        return this;
+    }
 }

@@ -91,7 +91,7 @@ public abstract class AccessControlImporterBaseTest  extends AbstractSecurityTes
         accessControlledTree = root.getTree("/testNode");
         aclTree = accessControlledTree.getChild(REP_POLICY);
 
-        importer = new AccessControlImporter();
+        importer = new AccessControlImporter(getNodeTypeManagementProvider());
 
         principalName = getTestUser().getPrincipal().getName();
         principalInfo = new PropInfo(REP_PRINCIPAL_NAME, PropertyType.STRING, createTextValue(principalName));

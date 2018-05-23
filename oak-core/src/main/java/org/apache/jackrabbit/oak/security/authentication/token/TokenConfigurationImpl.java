@@ -16,19 +16,20 @@
  */
 package org.apache.jackrabbit.oak.security.authentication.token;
 
+import static org.apache.jackrabbit.oak.spi.security.RegistrationConstants.OAK_SECURITY_NAME;
+
 import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
 import javax.annotation.Nonnull;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.apache.jackrabbit.oak.api.Root;
 import org.apache.jackrabbit.oak.spi.commit.MoveTracker;
 import org.apache.jackrabbit.oak.spi.commit.ValidatorProvider;
+import org.apache.jackrabbit.oak.spi.identifier.IdentifierManagementProvider;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationBase;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationParameters;
 import org.apache.jackrabbit.oak.spi.security.SecurityConfiguration;
@@ -49,7 +50,9 @@ import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 
-import static org.apache.jackrabbit.oak.spi.security.RegistrationConstants.OAK_SECURITY_NAME;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * Default implementation for the {@code TokenConfiguration} interface.
@@ -105,6 +108,8 @@ public class TokenConfigurationImpl extends ConfigurationBase implements TokenCo
     private final Map<String, CredentialsSupport> credentialsSupport = new ConcurrentHashMap<>(
             ImmutableMap.of(SimpleCredentialsSupport.class.getName(), SimpleCredentialsSupport.getInstance()));
 
+    private IdentifierManagementProvider identifierManagementProvider;
+
     @SuppressWarnings("UnusedDeclaration")
     public TokenConfigurationImpl() {
         super();
@@ -135,6 +140,15 @@ public class TokenConfigurationImpl extends ConfigurationBase implements TokenCo
         this.credentialsSupport.remove(credentialsSupport.getClass().getName());
     }
 
+    @Reference(name = "identifierManagementProvider", cardinality = ReferenceCardinality.MANDATORY)
+    public void bindIdentifierManagementProvider(IdentifierManagementProvider identifierManagementProvider) {
+        this.identifierManagementProvider = identifierManagementProvider;
+    }
+
+    public void unbindIdentifierManagementProvider(IdentifierManagementProvider identifierManagementProvider) {
+        this.identifierManagementProvider = null;
+    }
+
     //----------------------------------------------< SecurityConfiguration >---
     @Nonnull
     @Override
@@ -160,7 +174,7 @@ public class TokenConfigurationImpl extends ConfigurationBase implements TokenCo
     @Override
     public TokenProvider getTokenProvider(Root root) {
         UserConfiguration uc = getSecurityProvider().getConfiguration(UserConfiguration.class);
-        return new TokenProviderImpl(root, getParameters(), uc, newCredentialsSupport());
+        return new TokenProviderImpl(root, getParameters(), uc, identifierManagementProvider, newCredentialsSupport());
     }
 
     private CredentialsSupport newCredentialsSupport() {

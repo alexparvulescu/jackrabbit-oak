@@ -38,7 +38,7 @@ public class UserPrincipalProviderTest extends AbstractPrincipalProviderTest {
 
     @Override
     protected PrincipalProvider createPrincipalProvider() {
-        return new UserPrincipalProvider(root, getUserConfiguration(), namePathMapper);
+        return new UserPrincipalProvider(root, getUserConfiguration(), namePathMapper, getIdentifierManagementProvider());
     }
 
     @Test

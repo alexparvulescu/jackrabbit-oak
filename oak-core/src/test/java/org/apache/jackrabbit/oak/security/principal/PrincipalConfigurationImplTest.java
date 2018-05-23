@@ -21,6 +21,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.jackrabbit.api.security.principal.PrincipalManager;
+import org.apache.jackrabbit.api.security.user.UserManager;
 import org.apache.jackrabbit.oak.AbstractSecurityTest;
 import org.apache.jackrabbit.oak.api.Root;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
@@ -32,7 +33,6 @@ import org.apache.jackrabbit.oak.spi.security.ConfigurationParameters;
 import org.apache.jackrabbit.oak.spi.security.Context;
 import org.apache.jackrabbit.oak.spi.security.SecurityConfiguration;
 import org.apache.jackrabbit.oak.spi.security.SecurityProvider;
-import org.apache.jackrabbit.oak.spi.security.authorization.AuthorizationConfiguration;
 import org.apache.jackrabbit.oak.spi.security.principal.EmptyPrincipalProvider;
 import org.apache.jackrabbit.oak.spi.security.principal.PrincipalConfiguration;
 import org.apache.jackrabbit.oak.spi.security.principal.PrincipalManagerImpl;
@@ -136,13 +136,22 @@ public class PrincipalConfigurationImplTest extends AbstractSecurityTest {
             @Override
             public <T> T getConfiguration(@Nonnull Class<T> configClass) {
                 if (configClass.equals(UserConfiguration.class)) {
-                    return (T) new UserConfigurationImpl(this) {
+                    UserConfigurationImpl uc = new UserConfigurationImpl() {
+                        @Nonnull
+                        @Override
+                        public UserManager getUserManager(Root root, NamePathMapper namePathMapper) {
+                            return getUserConfiguration().getUserManager(root, namePathMapper);
+                        }
+
                         @Nullable
                         @Override
                         public PrincipalProvider getUserPrincipalProvider(@Nonnull Root root, @Nonnull NamePathMapper namePathMapper) {
                             return null;
                         }
                     };
+                    uc.bindIdentifierManagementProvider(getIdentifierManagementProvider());
+                    uc.bindNodeTypeManagementProvider(getNodeTypeManagementProvider());
+                    return (T) uc;
                 } else {
                     throw new IllegalArgumentException();
                 }

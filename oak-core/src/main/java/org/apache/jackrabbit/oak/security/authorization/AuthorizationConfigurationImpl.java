@@ -16,17 +16,18 @@
  */
 package org.apache.jackrabbit.oak.security.authorization;
 
+import static org.apache.jackrabbit.oak.spi.security.RegistrationConstants.OAK_SECURITY_NAME;
+
 import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import javax.annotation.Nonnull;
 import javax.jcr.security.AccessControlManager;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.jackrabbit.oak.api.Root;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
-import org.apache.jackrabbit.oak.security.authorization.permission.VersionablePathHook;
 import org.apache.jackrabbit.oak.security.authorization.accesscontrol.AccessControlImporter;
 import org.apache.jackrabbit.oak.security.authorization.accesscontrol.AccessControlManagerImpl;
 import org.apache.jackrabbit.oak.security.authorization.accesscontrol.AccessControlValidatorProvider;
@@ -35,6 +36,7 @@ import org.apache.jackrabbit.oak.security.authorization.permission.PermissionHoo
 import org.apache.jackrabbit.oak.security.authorization.permission.PermissionProviderImpl;
 import org.apache.jackrabbit.oak.security.authorization.permission.PermissionStoreValidatorProvider;
 import org.apache.jackrabbit.oak.security.authorization.permission.PermissionValidatorProvider;
+import org.apache.jackrabbit.oak.security.authorization.permission.VersionablePathHook;
 import org.apache.jackrabbit.oak.security.authorization.restriction.RestrictionProviderImpl;
 import org.apache.jackrabbit.oak.spi.commit.CommitHook;
 import org.apache.jackrabbit.oak.spi.commit.MoveTracker;
@@ -44,6 +46,7 @@ import org.apache.jackrabbit.oak.spi.mount.MountInfoProvider;
 import org.apache.jackrabbit.oak.spi.mount.Mounts;
 import org.apache.jackrabbit.oak.spi.namespace.NamespaceConstants;
 import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants;
+import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeManagementProvider;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationBase;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationParameters;
 import org.apache.jackrabbit.oak.spi.security.Context;
@@ -54,6 +57,7 @@ import org.apache.jackrabbit.oak.spi.security.authorization.accesscontrol.Access
 import org.apache.jackrabbit.oak.spi.security.authorization.permission.PermissionProvider;
 import org.apache.jackrabbit.oak.spi.security.authorization.restriction.RestrictionProvider;
 import org.apache.jackrabbit.oak.spi.security.privilege.PrivilegeConstants;
+import org.apache.jackrabbit.oak.spi.version.VersionManagementProvider;
 import org.apache.jackrabbit.oak.spi.xml.ImportBehavior;
 import org.apache.jackrabbit.oak.spi.xml.ProtectedItemImporter;
 import org.osgi.service.component.annotations.Activate;
@@ -65,7 +69,7 @@ import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import org.osgi.service.metatype.annotations.Option;
 
-import static org.apache.jackrabbit.oak.spi.security.RegistrationConstants.OAK_SECURITY_NAME;
+import com.google.common.collect.ImmutableList;
 
 /**
  * Default implementation of the {@code AccessControlConfiguration}.
@@ -75,7 +79,7 @@ import static org.apache.jackrabbit.oak.spi.security.RegistrationConstants.OAK_S
         property = OAK_SECURITY_NAME + "=org.apache.jackrabbit.oak.security.authorization.AuthorizationConfigurationImpl")
 @Designate(ocd = AuthorizationConfigurationImpl.Configuration.class)
 public class AuthorizationConfigurationImpl extends ConfigurationBase implements AuthorizationConfiguration, ProviderCtx {
-
+    
     @ObjectClassDefinition(name = "Apache Jackrabbit Oak AuthorizationConfiguration")
     @interface Configuration {
         @AttributeDefinition(
@@ -119,6 +123,11 @@ public class AuthorizationConfigurationImpl extends ConfigurationBase implements
 
     private MountInfoProvider mountInfoProvider = Mounts.defaultMountInfoProvider();
 
+    private VersionManagementProvider versionManagementProvider;
+
+    private NodeTypeManagementProvider nodeTypeManagementProvider;
+
+
     public AuthorizationConfigurationImpl() {
         super();
     }
@@ -158,7 +167,7 @@ public class AuthorizationConfigurationImpl extends ConfigurationBase implements
     public List<? extends CommitHook> getCommitHooks(@Nonnull String workspaceName) {
         return ImmutableList.of(
                 new VersionablePathHook(workspaceName, this),
-                new PermissionHook(workspaceName, getRestrictionProvider(), mountInfoProvider, getRootProvider(), getTreeProvider()));
+                new PermissionHook(workspaceName, getRestrictionProvider(), this));
     }
 
     @Nonnull
@@ -173,14 +182,14 @@ public class AuthorizationConfigurationImpl extends ConfigurationBase implements
     @Nonnull
     @Override
     public List<ProtectedItemImporter> getProtectedItemImporters() {
-        return ImmutableList.of(new AccessControlImporter());
+        return ImmutableList.of(new AccessControlImporter(nodeTypeManagementProvider));
     }
 
     //-----------------------------------------< AccessControlConfiguration >---
     @Nonnull
     @Override
     public AccessControlManager getAccessControlManager(@Nonnull Root root, @Nonnull NamePathMapper namePathMapper) {
-        return new AccessControlManagerImpl(root, namePathMapper, getSecurityProvider());
+        return new AccessControlManagerImpl(root, namePathMapper, getSecurityProvider(), getNodeTypeManagementProvider());
     }
 
     @Nonnull
@@ -197,19 +206,28 @@ public class AuthorizationConfigurationImpl extends ConfigurationBase implements
     @Nonnull
     @Override
     public PermissionProvider getPermissionProvider(@Nonnull Root root, @Nonnull String workspaceName,
-                                                    @Nonnull Set<Principal> principals) {
+            @Nonnull Set<Principal> principals) {
         Context ctx = getSecurityProvider().getConfiguration(AuthorizationConfiguration.class).getContext();
 
         if (mountInfoProvider.hasNonDefaultMounts()) {
-            return new MountPermissionProvider(root, workspaceName, principals, getRestrictionProvider(),
-                    getParameters(), ctx, this);
+            return new MountPermissionProvider(root, workspaceName, principals, getRestrictionProvider(), getParameters(), ctx, this);
         } else {
-            return new PermissionProviderImpl(root, workspaceName, principals, getRestrictionProvider(),
-                    getParameters(), ctx, this);
+            return new PermissionProviderImpl(root, workspaceName, principals, getRestrictionProvider(), getParameters(), ctx, this);
         }
     }
 
     //--------------------------------------------------------< ProviderCtx >---
+    @Nonnull
+    @Override
+    public NodeTypeManagementProvider getNodeTypeManagementProvider() {
+        return nodeTypeManagementProvider;
+    }
+
+    @Nonnull
+    @Override
+    public VersionManagementProvider getVersionManagementProvider() {
+        return versionManagementProvider;
+    }
 
     @Nonnull
     @Override
@@ -225,5 +243,23 @@ public class AuthorizationConfigurationImpl extends ConfigurationBase implements
 
     public void unbindMountInfoProvider(MountInfoProvider mountInfoProvider) {
         this.mountInfoProvider = null;
+    }
+
+    @Reference(name = "versionManagementProvider", cardinality = ReferenceCardinality.MANDATORY)
+    public void bindVersionManagementProvider(VersionManagementProvider versionManagementProvider) {
+        this.versionManagementProvider = versionManagementProvider;
+    }
+
+    public void unbindVersionManagementProvider(VersionManagementProvider versionManagementProvider) {
+        this.versionManagementProvider = null;
+    }
+
+    @Reference(name = "nodeTypeManagementProvider", cardinality = ReferenceCardinality.MANDATORY)
+    public void bindNodeTypeManagementProvider(NodeTypeManagementProvider nodeTypeManagementProvider) {
+        this.nodeTypeManagementProvider = nodeTypeManagementProvider;
+    }
+
+    public void unbindNodeTypeManagementProvider(NodeTypeManagementProvider nodeTypeManagementProvider) {
+        this.nodeTypeManagementProvider = null;
     }
 }

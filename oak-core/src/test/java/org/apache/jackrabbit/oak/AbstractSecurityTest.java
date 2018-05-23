@@ -45,11 +45,14 @@ import org.apache.jackrabbit.oak.api.Root;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
 import org.apache.jackrabbit.oak.plugins.commit.ConflictValidatorProvider;
 import org.apache.jackrabbit.oak.plugins.commit.JcrConflictHandler;
+import org.apache.jackrabbit.oak.plugins.identifier.IdentifierManagementProviderService;
 import org.apache.jackrabbit.oak.plugins.index.property.PropertyIndexEditorProvider;
 import org.apache.jackrabbit.oak.plugins.index.property.PropertyIndexProvider;
 import org.apache.jackrabbit.oak.plugins.index.reference.ReferenceEditorProvider;
 import org.apache.jackrabbit.oak.plugins.index.reference.ReferenceIndexProvider;
 import org.apache.jackrabbit.oak.plugins.name.NamespaceEditorProvider;
+import org.apache.jackrabbit.oak.plugins.name.NamespaceManagementProviderService;
+import org.apache.jackrabbit.oak.plugins.nodetype.NodeTypeManagementProviderService;
 import org.apache.jackrabbit.oak.plugins.nodetype.TypeEditorProvider;
 import org.apache.jackrabbit.oak.plugins.tree.RootProvider;
 import org.apache.jackrabbit.oak.plugins.tree.TreeProvider;
@@ -57,8 +60,12 @@ import org.apache.jackrabbit.oak.plugins.tree.impl.RootProviderService;
 import org.apache.jackrabbit.oak.plugins.tree.impl.TreeProviderService;
 import org.apache.jackrabbit.oak.plugins.value.jcr.ValueFactoryImpl;
 import org.apache.jackrabbit.oak.plugins.version.VersionHook;
+import org.apache.jackrabbit.oak.plugins.version.VersionManagementProviderService;
 import org.apache.jackrabbit.oak.query.QueryEngineSettings;
 import org.apache.jackrabbit.oak.security.internal.SecurityProviderBuilder;
+import org.apache.jackrabbit.oak.spi.identifier.IdentifierManagementProvider;
+import org.apache.jackrabbit.oak.spi.namespace.NamespaceManagementProvider;
+import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeManagementProvider;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationParameters;
 import org.apache.jackrabbit.oak.spi.security.SecurityProvider;
 import org.apache.jackrabbit.oak.spi.security.authentication.ConfigurationUtil;
@@ -67,6 +74,7 @@ import org.apache.jackrabbit.oak.spi.security.principal.PrincipalConfiguration;
 import org.apache.jackrabbit.oak.spi.security.privilege.PrivilegeConfiguration;
 import org.apache.jackrabbit.oak.spi.security.user.UserConfiguration;
 import org.apache.jackrabbit.oak.spi.security.user.util.UserUtil;
+import org.apache.jackrabbit.oak.spi.version.VersionManagementProvider;
 import org.junit.After;
 import org.junit.Before;
 
@@ -87,6 +95,10 @@ public abstract class AbstractSecurityTest {
     protected QueryEngineSettings querySettings;
     private final RootProvider rootProvider = new RootProviderService(); 
     private final TreeProvider treeProvider = new TreeProviderService();
+    private final VersionManagementProvider versionManagementProvider = new VersionManagementProviderService();
+    private final NodeTypeManagementProvider nodeTypeManagementProvider = new NodeTypeManagementProviderService();
+    private final NamespaceManagementProvider namespaceManagementProvider = new NamespaceManagementProviderService();
+    private final IdentifierManagementProvider identifierManagementProvider = new IdentifierManagementProviderService();
 
     @Before
     public void before() throws Exception {
@@ -142,6 +154,9 @@ public abstract class AbstractSecurityTest {
         return SecurityProviderBuilder.newBuilder().with(getSecurityConfigParameters())
                 .withRootProvider(rootProvider)
                 .withTreeProvider(treeProvider)
+                .withNodeTypeMangementProvider(nodeTypeManagementProvider)
+                .withVersionManagementProvider(versionManagementProvider)
+                .withIdentifierManagementProvider(identifierManagementProvider)
                 .build();
     }
 
@@ -263,5 +278,21 @@ public abstract class AbstractSecurityTest {
 
     public TreeProvider getTreeProvider() {
         return treeProvider;
+    }
+
+    public VersionManagementProvider getVersionManagementProvider() {
+        return versionManagementProvider;
+    }
+
+    public NodeTypeManagementProvider getNodeTypeManagementProvider() {
+        return nodeTypeManagementProvider;
+    }
+
+    public NamespaceManagementProvider getNamespaceManagementProvider() {
+        return namespaceManagementProvider;
+    }
+
+    public IdentifierManagementProvider getIdentifierManagementProvider() {
+        return identifierManagementProvider;
     }
 }

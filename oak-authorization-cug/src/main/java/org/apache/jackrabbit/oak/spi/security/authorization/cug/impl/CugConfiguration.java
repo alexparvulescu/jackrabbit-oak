@@ -16,6 +16,8 @@
  */
 package org.apache.jackrabbit.oak.spi.security.authorization.cug.impl;
 
+import static org.apache.jackrabbit.oak.spi.security.RegistrationConstants.OAK_SECURITY_NAME;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.Principal;
@@ -23,12 +25,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import javax.annotation.Nonnull;
 import javax.jcr.RepositoryException;
 import javax.jcr.security.AccessControlManager;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.ConfigurationPolicy;
@@ -39,13 +40,10 @@ import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.apache.felix.scr.annotations.Service;
 import org.apache.jackrabbit.oak.api.Root;
-import org.apache.jackrabbit.oak.api.Tree;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
 import org.apache.jackrabbit.oak.plugins.memory.MemoryNodeStore;
 import org.apache.jackrabbit.oak.plugins.name.NamespaceEditorProvider;
-import org.apache.jackrabbit.oak.plugins.nodetype.ReadOnlyNodeTypeManager;
 import org.apache.jackrabbit.oak.plugins.nodetype.TypeEditorProvider;
-import org.apache.jackrabbit.oak.plugins.nodetype.write.NodeTypeRegistry;
 import org.apache.jackrabbit.oak.spi.commit.CommitHook;
 import org.apache.jackrabbit.oak.spi.commit.CompositeEditorProvider;
 import org.apache.jackrabbit.oak.spi.commit.EditorHook;
@@ -54,7 +52,9 @@ import org.apache.jackrabbit.oak.spi.commit.ValidatorProvider;
 import org.apache.jackrabbit.oak.spi.lifecycle.RepositoryInitializer;
 import org.apache.jackrabbit.oak.spi.mount.MountInfoProvider;
 import org.apache.jackrabbit.oak.spi.mount.Mounts;
-import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants;
+import org.apache.jackrabbit.oak.spi.namespace.NamespaceManagementProvider;
+import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeManagementProvider;
+import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeManager;
 import org.apache.jackrabbit.oak.spi.security.CompositeConfiguration;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationBase;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationParameters;
@@ -69,9 +69,11 @@ import org.apache.jackrabbit.oak.spi.security.authorization.restriction.Restrict
 import org.apache.jackrabbit.oak.spi.state.ApplyDiff;
 import org.apache.jackrabbit.oak.spi.state.NodeState;
 import org.apache.jackrabbit.oak.spi.state.NodeStore;
+import org.apache.jackrabbit.oak.spi.version.VersionManagementProvider;
 import org.apache.jackrabbit.oak.spi.xml.ProtectedItemImporter;
 
-import static org.apache.jackrabbit.oak.spi.security.RegistrationConstants.OAK_SECURITY_NAME;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 @Component(metatype = true,
         label = "Apache Jackrabbit Oak CUG Configuration",
@@ -110,6 +112,15 @@ public class CugConfiguration extends ConfigurationBase implements Authorization
     @Reference
     private MountInfoProvider mountInfoProvider = Mounts.defaultMountInfoProvider();
 
+    @Reference
+    private VersionManagementProvider versionManagementProvider;
+
+    @Reference
+    private NamespaceManagementProvider namespaceManagementProvider;
+
+    @Reference
+    private NodeTypeManagementProvider nodeTypeManagementProvider;
+
     private Set<String> supportedPaths = ImmutableSet.of();
 
     @SuppressWarnings("UnusedDeclaration")
@@ -142,7 +153,7 @@ public class CugConfiguration extends ConfigurationBase implements Authorization
         if (!enabled || supportedPaths.isEmpty() || getExclude().isExcluded(principals)) {
             return EmptyPermissionProvider.getInstance();
         } else {
-            return new CugPermissionProvider(root, workspaceName, principals, supportedPaths, getSecurityProvider().getConfiguration(AuthorizationConfiguration.class).getContext(), getRootProvider(), getTreeProvider());
+            return new CugPermissionProvider(root, workspaceName, principals, supportedPaths, getSecurityProvider().getConfiguration(AuthorizationConfiguration.class).getContext(), getRootProvider(), getTreeProvider(), versionManagementProvider);
         }
     }
 
@@ -159,8 +170,17 @@ public class CugConfiguration extends ConfigurationBase implements Authorization
             NodeState base = builder.getNodeState();
             NodeStore store = new MemoryNodeStore(base);
 
-            Root root = getRootProvider().createSystemRoot(store,
-                    new EditorHook(new CompositeEditorProvider(new NamespaceEditorProvider(), new TypeEditorProvider())));
+            // TODO
+            Root root = getRootProvider().createSystemRoot(store, 
+                    new EditorHook(new CompositeEditorProvider(
+//                            new NamespaceEditorProvider(),
+                            //new TypeEditorProvider(true)
+                            
+                            )));
+                    
+                    
+                    //null);
+//                    new EditorHook(new CompositeEditorProvider(namespaceManagementProvider.getEditorProvider(), nodeTypeManagementProvider.getEditorProvider(true))));
             if (registerCugNodeTypes(root)) {
                 NodeState target = store.getRoot();
                 target.compareAgainstBaseState(base, new ApplyDiff(builder));
@@ -177,7 +197,7 @@ public class CugConfiguration extends ConfigurationBase implements Authorization
     @Nonnull
     @Override
     public List<? extends ValidatorProvider> getValidators(@Nonnull String workspaceName, @Nonnull Set<Principal> principals, @Nonnull MoveTracker moveTracker) {
-        return ImmutableList.of(new CugValidatorProvider());
+        return ImmutableList.of(new CugValidatorProvider(nodeTypeManagementProvider));
     }
 
     @Nonnull
@@ -221,6 +241,30 @@ public class CugConfiguration extends ConfigurationBase implements Authorization
         this.mountInfoProvider = null;
     }
 
+    public void bindVersionManagementProvider(VersionManagementProvider versionManagementProvider) {
+        this.versionManagementProvider = versionManagementProvider;
+    }
+
+    public void unbindVersionManagementProvider(VersionManagementProvider versionManagementProvider) {
+        this.versionManagementProvider = null;
+    }
+
+    public void bindNamespaceManagementProvider(NamespaceManagementProvider namespaceManagementProvider) {
+        this.namespaceManagementProvider = namespaceManagementProvider;
+    }
+
+    public void unbindNamespaceManagementProvider(NamespaceManagementProvider namespaceManagementProvider) {
+        this.namespaceManagementProvider = null;
+    }
+
+    public void bindNodeTypeManagementProvider(NodeTypeManagementProvider nodeTypeManagementProvider) {
+        this.nodeTypeManagementProvider = nodeTypeManagementProvider;
+    }
+
+    public void unbindNodeTypeManagementProvider(NodeTypeManagementProvider nodeTypeManagementProvider) {
+        this.nodeTypeManagementProvider = null;
+    }
+
     public void bindExclude(CugExclude exclude) {
         this.exclude = exclude;
     }
@@ -235,17 +279,12 @@ public class CugConfiguration extends ConfigurationBase implements Authorization
         return (exclude == null) ? new CugExclude.Default() : exclude;
     }
 
-    static boolean registerCugNodeTypes(@Nonnull final Root root) {
+    boolean registerCugNodeTypes(@Nonnull final Root root) {
         try {
-            ReadOnlyNodeTypeManager ntMgr = new ReadOnlyNodeTypeManager() {
-                @Override
-                protected Tree getTypes() {
-                    return root.getTree(NodeTypeConstants.NODE_TYPES_PATH);
-                }
-            };
+            NodeTypeManager ntMgr = nodeTypeManagementProvider.getReadOnlyNodeTypeManager(root, NamePathMapper.DEFAULT);
             if (!ntMgr.hasNodeType(NT_REP_CUG_POLICY)) {
                 try (InputStream stream = CugConfiguration.class.getResourceAsStream("cug_nodetypes.cnd")) {
-                    NodeTypeRegistry.register(root, stream, "cug node types");
+                    nodeTypeManagementProvider.registerNodeTypes(root, stream, "cug node types");
                     return true;
                 }
             }

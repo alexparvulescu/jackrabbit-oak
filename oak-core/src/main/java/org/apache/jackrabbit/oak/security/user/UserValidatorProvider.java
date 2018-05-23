@@ -23,6 +23,7 @@ import org.apache.jackrabbit.oak.plugins.tree.TreeProvider;
 import org.apache.jackrabbit.oak.spi.commit.CommitInfo;
 import org.apache.jackrabbit.oak.spi.commit.Validator;
 import org.apache.jackrabbit.oak.spi.commit.ValidatorProvider;
+import org.apache.jackrabbit.oak.spi.identifier.IdentifierManagementProvider;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationParameters;
 import org.apache.jackrabbit.oak.spi.state.NodeState;
 
@@ -34,13 +35,17 @@ class UserValidatorProvider extends ValidatorProvider {
     private final ConfigurationParameters config;
     private final RootProvider rootProvider;
     private final TreeProvider treeProvider;
+    private final IdentifierManagementProvider identifierManagementProvider;
 
     private MembershipProvider membershipProvider;
 
-    UserValidatorProvider(@Nonnull ConfigurationParameters config, @Nonnull RootProvider rootProvider, @Nonnull TreeProvider treeProvider) {
+    UserValidatorProvider(@Nonnull ConfigurationParameters config,
+                          @Nonnull RootProvider rootProvider, @Nonnull TreeProvider treeProvider,
+                          @Nonnull IdentifierManagementProvider identifierManagementProvider) {
         this.config = config;
         this.rootProvider = rootProvider;
         this.treeProvider = treeProvider;
+        this.identifierManagementProvider = identifierManagementProvider;
     }
 
     //--------------------------------------------------< ValidatorProvider >---
@@ -48,7 +53,7 @@ class UserValidatorProvider extends ValidatorProvider {
     @Override @Nonnull
     public Validator getRootValidator(
             NodeState before, NodeState after, CommitInfo info) {
-        membershipProvider = new MembershipProvider(rootProvider.createReadOnlyRoot(after), config);
+        membershipProvider = new MembershipProvider(rootProvider.createReadOnlyRoot(after), config, identifierManagementProvider);
         return new UserValidator(treeProvider.createReadOnlyTree(before), treeProvider.createReadOnlyTree(after), this);
     }
 

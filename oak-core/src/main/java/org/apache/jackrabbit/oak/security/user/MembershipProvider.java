@@ -22,21 +22,24 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.jcr.RepositoryException;
 
-import com.google.common.collect.Iterators;
 import org.apache.jackrabbit.commons.iterator.AbstractLazyIterator;
 import org.apache.jackrabbit.oak.api.PropertyState;
 import org.apache.jackrabbit.oak.api.Root;
 import org.apache.jackrabbit.oak.api.Tree;
 import org.apache.jackrabbit.oak.api.Type;
 import org.apache.jackrabbit.oak.plugins.memory.PropertyValues;
+import org.apache.jackrabbit.oak.spi.identifier.IdentifierManagementProvider;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationParameters;
 import org.apache.jackrabbit.oak.spi.security.user.AuthorizableType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.Iterators;
 
 /**
  * {@code MembershipProvider} implementation storing group membership information
@@ -114,8 +117,8 @@ class MembershipProvider extends AuthorizableBaseProvider {
      * @param root the current root
      * @param config the security configuration
      */
-    MembershipProvider(@Nonnull Root root, @Nonnull ConfigurationParameters config) {
-        super(root, config);
+    MembershipProvider(@Nonnull Root root, @Nonnull ConfigurationParameters config, @Nonnull IdentifierManagementProvider identifierManagementProvider) {
+        super(root, config, identifierManagementProvider);
     }
 
     /**

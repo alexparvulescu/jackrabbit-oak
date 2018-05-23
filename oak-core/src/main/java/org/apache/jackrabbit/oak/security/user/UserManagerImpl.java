@@ -22,14 +22,13 @@ import java.security.Principal;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.jcr.RepositoryException;
 import javax.jcr.UnsupportedRepositoryOperationException;
 
-import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
 import org.apache.jackrabbit.api.security.principal.PrincipalManager;
 import org.apache.jackrabbit.api.security.user.Authorizable;
 import org.apache.jackrabbit.api.security.user.AuthorizableExistsException;
@@ -41,8 +40,11 @@ import org.apache.jackrabbit.oak.api.Root;
 import org.apache.jackrabbit.oak.api.Tree;
 import org.apache.jackrabbit.oak.api.Type;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
-import org.apache.jackrabbit.oak.plugins.nodetype.ReadOnlyNodeTypeManager;
+import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
 import org.apache.jackrabbit.oak.security.user.query.UserQueryManager;
+import org.apache.jackrabbit.oak.spi.identifier.IdentifierManagementProvider;
+import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeManagementProvider;
+import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeManager;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationParameters;
 import org.apache.jackrabbit.oak.spi.security.SecurityProvider;
 import org.apache.jackrabbit.oak.spi.security.principal.EveryonePrincipal;
@@ -57,9 +59,11 @@ import org.apache.jackrabbit.oak.spi.security.user.action.DefaultAuthorizableAct
 import org.apache.jackrabbit.oak.spi.security.user.action.GroupAction;
 import org.apache.jackrabbit.oak.spi.security.user.util.PasswordUtil;
 import org.apache.jackrabbit.oak.spi.security.user.util.UserUtil;
-import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 
 /**
  * UserManagerImpl...
@@ -71,6 +75,7 @@ public class UserManagerImpl implements UserManager {
     private final Root root;
     private final NamePathMapper namePathMapper;
     private final SecurityProvider securityProvider;
+    private final NodeTypeManagementProvider nodeTypeManagementProvider;
 
     private final UserProvider userProvider;
     private final MembershipProvider membershipProvider;
@@ -78,18 +83,21 @@ public class UserManagerImpl implements UserManager {
     private final AuthorizableActionProvider actionProvider;
 
     private UserQueryManager queryManager;
-    private ReadOnlyNodeTypeManager ntMgr;
+    private NodeTypeManager ntMgr;
 
     public UserManagerImpl(@Nonnull Root root, @Nonnull NamePathMapper namePathMapper,
-                           @Nonnull SecurityProvider securityProvider) {
+                           @Nonnull SecurityProvider securityProvider,
+                           @Nonnull NodeTypeManagementProvider nodeTypeManagementProvider,
+                           @Nonnull IdentifierManagementProvider identifierManagementProvider) {
         this.root = root;
         this.namePathMapper = namePathMapper;
         this.securityProvider = securityProvider;
+        this.nodeTypeManagementProvider = nodeTypeManagementProvider;
 
         UserConfiguration uc = securityProvider.getConfiguration(UserConfiguration.class);
         this.config = uc.getParameters();
-        this.userProvider = new UserProvider(root, config);
-        this.membershipProvider = new MembershipProvider(root, config);
+        this.userProvider = new UserProvider(root, config, identifierManagementProvider);
+        this.membershipProvider = new MembershipProvider(root, config, identifierManagementProvider);
         this.actionProvider = getActionProvider(config);
     }
 
@@ -378,9 +386,9 @@ public class UserManagerImpl implements UserManager {
     }
 
     @Nonnull
-    ReadOnlyNodeTypeManager getNodeTypeManager() {
+    NodeTypeManager getNodeTypeManager() {
         if (ntMgr == null) {
-            ntMgr = ReadOnlyNodeTypeManager.getInstance(root, NamePathMapper.DEFAULT);
+            ntMgr = nodeTypeManagementProvider.getReadOnlyNodeTypeManager(root, NamePathMapper.DEFAULT);
         }
         return ntMgr;
     }

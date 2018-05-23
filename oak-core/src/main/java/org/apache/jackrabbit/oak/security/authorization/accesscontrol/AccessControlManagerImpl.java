@@ -45,15 +45,6 @@ import javax.jcr.security.AccessControlPolicyIterator;
 import javax.jcr.security.NamedAccessControlPolicy;
 import javax.jcr.security.Privilege;
 
-import com.google.common.base.Function;
-import com.google.common.base.Objects;
-import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-import com.google.common.primitives.Ints;
 import org.apache.jackrabbit.JcrConstants;
 import org.apache.jackrabbit.api.security.JackrabbitAccessControlList;
 import org.apache.jackrabbit.api.security.JackrabbitAccessControlPolicy;
@@ -72,9 +63,11 @@ import org.apache.jackrabbit.oak.api.Type;
 import org.apache.jackrabbit.oak.commons.PathUtils;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
 import org.apache.jackrabbit.oak.plugins.memory.PropertyBuilder;
-import org.apache.jackrabbit.oak.plugins.nodetype.ReadOnlyNodeTypeManager;
+import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
 import org.apache.jackrabbit.oak.security.authorization.permission.PermissionUtil;
 import org.apache.jackrabbit.oak.security.authorization.restriction.PrincipalRestrictionProvider;
+import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeManagementProvider;
+import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeManager;
 import org.apache.jackrabbit.oak.spi.query.QueryConstants;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationParameters;
 import org.apache.jackrabbit.oak.spi.security.SecurityProvider;
@@ -91,11 +84,20 @@ import org.apache.jackrabbit.oak.spi.security.principal.PrincipalImpl;
 import org.apache.jackrabbit.oak.spi.security.privilege.PrivilegeBits;
 import org.apache.jackrabbit.oak.spi.security.privilege.PrivilegeBitsProvider;
 import org.apache.jackrabbit.oak.spi.xml.ImportBehavior;
-import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
 import org.apache.jackrabbit.util.ISO9075;
 import org.apache.jackrabbit.util.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Function;
+import com.google.common.base.Objects;
+import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import com.google.common.primitives.Ints;
 
 /**
  * Default implementation of the {@code JackrabbitAccessControlManager} interface.
@@ -107,7 +109,7 @@ public class AccessControlManagerImpl extends AbstractAccessControlManager imple
     private static final Logger log = LoggerFactory.getLogger(AccessControlManagerImpl.class);
 
     private final PrivilegeBitsProvider bitsProvider;
-    private final ReadOnlyNodeTypeManager ntMgr;
+    private final NodeTypeManager ntMgr;
 
     private final PrincipalManager principalManager;
     private final RestrictionProvider restrictionProvider;
@@ -116,11 +118,11 @@ public class AccessControlManagerImpl extends AbstractAccessControlManager imple
     private final Set<String> readPaths;
 
     public AccessControlManagerImpl(@Nonnull Root root, @Nonnull NamePathMapper namePathMapper,
-                                    @Nonnull SecurityProvider securityProvider) {
+                                    @Nonnull SecurityProvider securityProvider, @Nonnull NodeTypeManagementProvider nodeTypeManagementProvider) {
         super(root, namePathMapper, securityProvider);
 
         bitsProvider = new PrivilegeBitsProvider(root);
-        ntMgr = ReadOnlyNodeTypeManager.getInstance(root, namePathMapper);
+        ntMgr = nodeTypeManagementProvider.getReadOnlyNodeTypeManager(root, namePathMapper);
 
         principalManager = securityProvider.getConfiguration(PrincipalConfiguration.class).getPrincipalManager(root, namePathMapper);
         restrictionProvider = getConfig().getRestrictionProvider();
