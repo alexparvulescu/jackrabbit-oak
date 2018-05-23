@@ -18,17 +18,15 @@ package org.apache.jackrabbit.oak.plugins.nodetype;
 
 import java.util.Arrays;
 import java.util.Set;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-
 import org.apache.jackrabbit.oak.api.Tree;
+import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
 import org.apache.jackrabbit.oak.spi.state.ChildNodeEntry;
 import org.apache.jackrabbit.oak.spi.state.NodeState;
-import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Predicates.in;
@@ -49,7 +47,7 @@ import static org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants.REP_PRIMA
  *
  * @since Oak 0.11
  */
-public class TypePredicate implements Predicate<NodeState> {
+public class TypePredicate implements Predicate<NodeState>, java.util.function.Predicate<NodeState> {
 
     @Nonnull
     public static TypePredicate isOrderable(@Nonnull NodeState root) {
@@ -199,6 +197,13 @@ public class TypePredicate implements Predicate<NodeState> {
             }
         }
         return false;
+    }
+
+    //---------------------------------------< java.util.function.Predicate >---
+
+    @Override
+    public boolean test(@Nullable NodeState input) {
+        return apply(input);
     }
 
     //------------------------------------------------------------< Object >--

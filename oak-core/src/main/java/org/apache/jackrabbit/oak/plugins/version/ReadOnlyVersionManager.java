@@ -18,6 +18,8 @@
  */
 package org.apache.jackrabbit.oak.plugins.version;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.jcr.RepositoryException;
@@ -32,20 +34,19 @@ import org.apache.jackrabbit.oak.commons.PathUtils;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
 import org.apache.jackrabbit.oak.plugins.identifier.IdentifierManager;
 import org.apache.jackrabbit.oak.plugins.nodetype.ReadOnlyNodeTypeManager;
+import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
 import org.apache.jackrabbit.oak.plugins.tree.factories.TreeFactory;
 import org.apache.jackrabbit.oak.spi.state.NodeState;
-import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
 import org.apache.jackrabbit.oak.spi.version.VersionConstants;
+import org.apache.jackrabbit.oak.spi.version.VersionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * {@code ReadOnlyVersionManager} provides implementations for read-only
  * version operations modeled after the ones available in {@link javax.jcr.version.VersionManager}.
  */
-public abstract class ReadOnlyVersionManager {
+public abstract class ReadOnlyVersionManager implements VersionManager {
 
     private static final Logger log = LoggerFactory.getLogger(ReadOnlyVersionManager.class);
 
@@ -104,6 +105,11 @@ public abstract class ReadOnlyVersionManager {
         };
     }
 
+    @Override
+    public boolean isVersionStorageTree(@Nonnull Tree tree) {
+        return isVersionStoreTree(tree);
+    }
+
     /**
      * Returns {@code true} if the tree is checked out; otherwise
      * {@code false}. The root node is always considered checked out.
@@ -111,6 +117,7 @@ public abstract class ReadOnlyVersionManager {
      * @param tree the tree to check.
      * @return whether the tree is checked out or not.
      */
+    @Override
     public boolean isCheckedOut(@Nonnull Tree tree) {
         if (checkNotNull(tree).exists()) {
             PropertyState p = tree.getProperty(VersionConstants.JCR_ISCHECKEDOUT);
@@ -145,10 +152,10 @@ public abstract class ReadOnlyVersionManager {
      * @throws RepositoryException if an error occurs while checking the node
      *                             type of the tree.
      */
+    @Override
     @CheckForNull
     public Tree getVersionHistory(@Nonnull Tree versionable)
-            throws UnsupportedRepositoryOperationException,
-            RepositoryException {
+            throws UnsupportedRepositoryOperationException     {
         checkVersionable(versionable);
         String uuid = versionable.getProperty(VersionConstants.JCR_UUID).getValue(Type.STRING);
         return TreeUtil.getTree(getVersionStorage(), getVersionHistoryPath(uuid));
@@ -160,6 +167,7 @@ public abstract class ReadOnlyVersionManager {
      * @param uuid the uuid of the version tree.
      * @return the version tree or {@code null} if there is none.
      */
+    @Override
     @CheckForNull
     public Tree getVersion(@Nonnull String uuid) {
         return getIdentifierManager().getTree(uuid);
@@ -173,6 +181,7 @@ public abstract class ReadOnlyVersionManager {
      * @param uuid the uuid of the versionable node
      * @return the relative path of the version history for the given uuid.
      */
+    @Override
     @Nonnull
     public String getVersionHistoryPath(@Nonnull String uuid) {
         String relPath = "";
@@ -196,10 +205,10 @@ public abstract class ReadOnlyVersionManager {
      * @throws RepositoryException if an error occurs while checking the node
      *                             type of the tree.
      */
+    @Override
     @CheckForNull
     public Tree getBaseVersion(@Nonnull Tree versionable)
-            throws UnsupportedRepositoryOperationException,
-            RepositoryException {
+            throws UnsupportedRepositoryOperationException {
         checkVersionable(versionable);
         PropertyState p = versionable.getProperty(VersionConstants.JCR_BASEVERSION);
         if (p == null) {
@@ -255,6 +264,7 @@ public abstract class ReadOnlyVersionManager {
      *
      * @see VersionConstants#MIX_REP_VERSIONABLE_PATHS
      */
+    @Override
     @CheckForNull
     public Tree getVersionable(@Nonnull Tree versionTree, @Nonnull String workspaceName) {
         Root root = getWorkspaceRoot();
@@ -306,8 +316,8 @@ public abstract class ReadOnlyVersionManager {
      */
     @Nonnull
     protected Tree checkVersionable(@Nonnull Tree tree)
-            throws UnsupportedRepositoryOperationException,
-            RepositoryException {
+            throws UnsupportedRepositoryOperationException
+    {
         if (!isVersionable(checkNotNull(tree))) {
             throw new UnsupportedRepositoryOperationException("Node at " +
                     tree.getPath() + " is not versionable");

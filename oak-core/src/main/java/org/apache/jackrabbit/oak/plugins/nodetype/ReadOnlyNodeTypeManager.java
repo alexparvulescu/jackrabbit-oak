@@ -66,7 +66,7 @@ import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants;
  * related to node type modifications throw
  * {@link UnsupportedRepositoryOperationException}.
  */
-public abstract class ReadOnlyNodeTypeManager implements NodeTypeManager, EffectiveNodeTypeProvider, DefinitionProvider {
+public abstract class ReadOnlyNodeTypeManager implements NodeTypeManager, org.apache.jackrabbit.oak.spi.nodetype.NodeTypeManager, EffectiveNodeTypeProvider, DefinitionProvider {
 
     /**
      * Returns the internal name for the specified JCR name.
@@ -285,7 +285,7 @@ public abstract class ReadOnlyNodeTypeManager implements NodeTypeManager, Effect
 
     @Override
     public boolean isNodeType(@CheckForNull String primaryTypeName, @Nonnull Iterator<String> mixinTypes,
-                              @Nonnull String nodeTypeName) throws NoSuchNodeTypeException, RepositoryException {
+                              @Nonnull String nodeTypeName) {
         // shortcut
         if (JcrConstants.NT_BASE.equals(nodeTypeName)) {
             return true;

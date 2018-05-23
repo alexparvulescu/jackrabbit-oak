@@ -26,9 +26,9 @@ import javax.jcr.RepositoryException;
 import org.apache.jackrabbit.oak.commons.PathUtils;
 import org.apache.jackrabbit.oak.namepath.JcrPathParser;
 import org.apache.jackrabbit.oak.namepath.JcrPathParser.Listener;
+import org.apache.jackrabbit.oak.spi.identifier.IdentifierManager;
 import org.apache.jackrabbit.oak.namepath.NameMapper;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
-import org.apache.jackrabbit.oak.plugins.identifier.IdentifierManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,6 +48,11 @@ public class NamePathMapperImpl implements NamePathMapper {
     public NamePathMapperImpl(NameMapper nameMapper) {
         this.nameMapper = nameMapper;
         this.idManager = null;
+    }
+
+    public NamePathMapperImpl(NameMapper nameMapper, org.apache.jackrabbit.oak.plugins.identifier.IdentifierManager idManager) {
+        this.nameMapper = nameMapper;
+        this.idManager = idManager;
     }
 
     public NamePathMapperImpl(NameMapper nameMapper, IdentifierManager idManager) {

@@ -61,7 +61,7 @@ import static org.apache.jackrabbit.oak.api.QueryEngine.NO_MAPPINGS;
 /**
  * TODO document
  */
-public class IdentifierManager {
+public class IdentifierManager implements org.apache.jackrabbit.oak.spi.identifier.IdentifierManager {
 
     private static final Logger log = LoggerFactory.getLogger(IdentifierManager.class);
 
@@ -115,6 +115,12 @@ public class IdentifierManager {
         }
     }
 
+    @Nonnull
+    @Override
+    public String getIdentifierFromTree(Tree tree) {
+        return getIdentifier(tree);
+    }
+
     /**
      * The possibly non existing tree identified by the specified {@code identifier} or {@code null}.
      *
@@ -123,6 +129,7 @@ public class IdentifierManager {
      *         such tree exists.
      */
     @CheckForNull
+    @Override
     public Tree getTree(String identifier) {
         if (identifier.startsWith("/")) {
             return root.getTree(identifier);
@@ -153,6 +160,7 @@ public class IdentifierManager {
      *         such tree exists or if the tree is not accessible.
      */
     @CheckForNull
+    @Override
     public String getPath(String identifier) {
         Tree tree = getTree(identifier);
         return tree != null && tree.exists()
@@ -169,6 +177,7 @@ public class IdentifierManager {
      *         such tree exists or isn't accessible to the content session.
      */
     @CheckForNull
+    @Override
     public String getPath(PropertyState referenceValue) {
         int type = referenceValue.getType().tag();
         if (type == PropertyType.REFERENCE || type == PropertyType.WEAKREFERENCE) {
@@ -187,6 +196,7 @@ public class IdentifierManager {
      *         such tree exists or isn't accessible to the content session.
      */
     @CheckForNull
+    @Override
     public String getPath(PropertyValue referenceValue) {
         int type = referenceValue.getType().tag();
         if (type == PropertyType.REFERENCE || type == PropertyType.WEAKREFERENCE) {
@@ -209,6 +219,7 @@ public class IdentifierManager {
      *         specified {@code tree} and matching the constraints.
      */
     @Nonnull
+    @Override
     public Iterable<String> getReferences(boolean weak, @Nonnull Tree tree, @Nullable final String propertyName) {
         if (!effectiveNodeTypeProvider.isNodeType(tree, JcrConstants.MIX_REFERENCEABLE)) {
             return Collections.emptySet(); // shortcut
@@ -301,6 +312,7 @@ public class IdentifierManager {
      *         specified {@code tree} and matching the constraints.
      */
     @Nonnull
+    @Override
     public Iterable<String> getReferences(@Nonnull Tree tree, @Nonnull final String propertyName,
                                           @Nonnull String ntName, boolean weak) {
         if (!effectiveNodeTypeProvider.isNodeType(tree, JcrConstants.MIX_REFERENCEABLE)) {

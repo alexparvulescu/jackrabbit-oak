@@ -143,6 +143,13 @@
       <artifactId>oak-core-spi</artifactId>
       <version>${project.version}</version>
     </dependency>
+
+    <!-- dependency>
+      <groupId>org.apache.jackrabbit</groupId>
+      <artifactId>oak-plugins</artifactId>
+      <version>${project.version}</version>
+    </dependency -->
+
     <dependency>
       <groupId>org.apache.jackrabbit</groupId>
       <artifactId>oak-query-spi</artifactId>
