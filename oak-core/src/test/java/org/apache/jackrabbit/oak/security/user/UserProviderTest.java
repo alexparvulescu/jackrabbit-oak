@@ -30,7 +30,9 @@ import org.apache.jackrabbit.oak.api.Root;
 import org.apache.jackrabbit.oak.api.Tree;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
 import org.apache.jackrabbit.oak.plugins.index.property.PropertyIndexEditorProvider;
+import org.apache.jackrabbit.oak.plugins.name.NamespaceEditorProvider;
 import org.apache.jackrabbit.oak.plugins.nodetype.ReadOnlyNodeTypeManager;
+import org.apache.jackrabbit.oak.plugins.nodetype.TypeEditorProvider;
 import org.apache.jackrabbit.oak.InitialContent;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationParameters;
 import org.apache.jackrabbit.oak.spi.security.OpenSecurityProvider;
@@ -42,9 +44,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertNotNull;
-import static junit.framework.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 /**
@@ -67,6 +69,8 @@ public class UserProviderTest {
         root = new Oak()
                 .with(new OpenSecurityProvider())
                 .with(new InitialContent())
+                .with(new NamespaceEditorProvider())
+                .with(new TypeEditorProvider())
                 .with(new PropertyIndexEditorProvider())
                 .createRoot();
 
@@ -234,8 +238,6 @@ public class UserProviderTest {
         Tree userTreeHalfWidth = userProvider.createUser(userHalfWidth, null);
         Tree userTreeFullWidth = userProvider.createUser(userFullWidth, null);
 
-        root.commit();
-
         assertEquals(userHalfWidth, UserUtil.getAuthorizableId(userTreeHalfWidth));
         assertEquals(userFullWidth, UserUtil.getAuthorizableId(userTreeFullWidth));
     }
@@ -270,7 +272,6 @@ public class UserProviderTest {
 
         for (String uid : m.keySet()) {
             Tree user = userProvider.createUser(uid, null);
-            root.commit();
 
             assertEquals(defaultUserPath + m.get(uid), user.getPath());
             assertEquals(uid, UserUtil.getAuthorizableId(user));
@@ -289,7 +290,6 @@ public class UserProviderTest {
 
         Tree user = up.createUser(userID, null);
         Tree group = up.createGroup(groupID, null);
-        root.commit();
 
         Tree a = up.getAuthorizable(userID);
         assertNotNull(a);

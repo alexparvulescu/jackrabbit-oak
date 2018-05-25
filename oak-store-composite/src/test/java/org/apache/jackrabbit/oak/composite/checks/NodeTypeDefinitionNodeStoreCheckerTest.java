@@ -21,7 +21,7 @@ import java.io.IOException;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Service;
 import org.apache.jackrabbit.JcrConstants;
-import org.apache.jackrabbit.oak.InitialContent;
+import org.apache.jackrabbit.oak.InitialContentHelper;
 import org.apache.jackrabbit.oak.api.CommitFailedException;
 import org.apache.jackrabbit.oak.api.IllegalRepositoryStateException;
 import org.apache.jackrabbit.oak.api.Type;
@@ -35,6 +35,7 @@ import org.apache.jackrabbit.oak.spi.mount.MountInfoProvider;
 import org.apache.jackrabbit.oak.spi.mount.Mounts;
 import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants;
 import org.apache.jackrabbit.oak.spi.state.NodeBuilder;
+import org.apache.jackrabbit.oak.spi.state.NodeStore;
 import org.junit.Test;
 
 /**
@@ -102,14 +103,8 @@ public class NodeTypeDefinitionNodeStoreCheckerTest {
     static abstract class Fixture {
         
         public void run() throws CommitFailedException {
-            MemoryNodeStore root = new MemoryNodeStore();
+            MemoryNodeStore root = new MemoryNodeStore(InitialContentHelper.INITIAL_CONTENT);
             MemoryNodeStore mount = new MemoryNodeStore();
-            
-            NodeBuilder rootBuilder = root.getRoot().builder();
-            new InitialContent().initialize(rootBuilder);
-            root.merge(rootBuilder, EmptyHook.INSTANCE, CommitInfo.EMPTY);
-
-            
             NodeBuilder mountBuilder = mount.getRoot().builder();
             initMountContent(mountBuilder);
             mount.merge(mountBuilder, EmptyHook.INSTANCE, CommitInfo.EMPTY);

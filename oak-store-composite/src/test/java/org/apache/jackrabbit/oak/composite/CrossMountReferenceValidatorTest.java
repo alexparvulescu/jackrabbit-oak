@@ -22,6 +22,7 @@ import org.apache.jackrabbit.oak.plugins.index.CompositeIndexEditorProvider;
 import org.apache.jackrabbit.oak.plugins.index.IndexUpdateProvider;
 import org.apache.jackrabbit.oak.plugins.index.property.PropertyIndexEditorProvider;
 import org.apache.jackrabbit.oak.plugins.index.reference.ReferenceEditorProvider;
+import org.apache.jackrabbit.oak.plugins.memory.EmptyNodeState;
 import org.apache.jackrabbit.oak.spi.commit.CommitInfo;
 import org.apache.jackrabbit.oak.spi.commit.CompositeEditorProvider;
 import org.apache.jackrabbit.oak.spi.commit.EditorHook;
@@ -35,7 +36,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import static org.apache.jackrabbit.JcrConstants.JCR_UUID;
-import static org.apache.jackrabbit.oak.InitialContent.INITIAL_CONTENT;
 import static org.apache.jackrabbit.oak.plugins.memory.PropertyStates.createProperty;
 
 public class CrossMountReferenceValidatorTest {
@@ -59,7 +59,7 @@ public class CrossMountReferenceValidatorTest {
 
     @Test
     public void globalToPrivateReference() throws Exception{
-        NodeState root = INITIAL_CONTENT;
+        NodeState root = EmptyNodeState.EMPTY_NODE;
 
         NodeBuilder builder = root.builder();
         NodeState before = builder.getNodeState();
@@ -76,7 +76,7 @@ public class CrossMountReferenceValidatorTest {
 
     @Test
     public void privateToGlobalReference() throws Exception{
-        NodeState root = INITIAL_CONTENT;
+        NodeState root = EmptyNodeState.EMPTY_NODE;
 
         NodeBuilder builder = root.builder();
         NodeState before = builder.getNodeState();

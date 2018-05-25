@@ -105,8 +105,6 @@ public class LuceneOakRepositoryStub extends OakSegmentTarRepositoryStub {
                 functionBasedIndex(props, "lower(name())");
                 functionBasedIndex(props, "upper(localname())");
                 functionBasedIndex(props, "lower(localname())");
-                functionBasedIndex(props, "upper([prop1])");
-                functionBasedIndex(props, "lower([prop1])");
 
                 enableFulltextIndex(props.child("allProps"));
             }

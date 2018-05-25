@@ -27,11 +27,13 @@ import org.apache.jackrabbit.oak.api.ContentRepository;
 import org.apache.jackrabbit.oak.api.PropertyState;
 import org.apache.jackrabbit.oak.api.Tree;
 import org.apache.jackrabbit.oak.api.Type;
-import org.apache.jackrabbit.oak.InitialContent;
+import org.apache.jackrabbit.oak.plugins.memory.MemoryNodeStore;
+import org.apache.jackrabbit.oak.InitialContentHelper;
 import org.apache.jackrabbit.oak.query.AbstractQueryTest;
 import org.apache.jackrabbit.oak.spi.commit.Observer;
 import org.apache.jackrabbit.oak.spi.query.QueryIndexProvider;
 import org.apache.jackrabbit.oak.spi.security.OpenSecurityProvider;
+import org.apache.jackrabbit.oak.spi.state.NodeStore;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -80,8 +82,9 @@ public class LuceneIndexQueryTest extends AbstractQueryTest {
     }
 
     Oak getOakRepo() {
+        NodeStore nodeStore = new MemoryNodeStore(InitialContentHelper.INITIAL_CONTENT);
         LowCostLuceneIndexProvider provider = new LowCostLuceneIndexProvider();
-        return new Oak().with(new InitialContent())
+        return new Oak(nodeStore)
             .with(new OpenSecurityProvider())
             .with((QueryIndexProvider) provider)
             .with((Observer) provider)

@@ -59,7 +59,7 @@ import static org.apache.jackrabbit.oak.plugins.index.lucene.TestUtil.newNodeAgg
 import static org.apache.jackrabbit.oak.plugins.index.lucene.TestUtil.useV2;
 import static org.apache.jackrabbit.oak.plugins.index.property.OrderedIndex.OrderDirection;
 import static org.apache.jackrabbit.oak.plugins.memory.PropertyStates.createProperty;
-import static org.apache.jackrabbit.oak.InitialContent.INITIAL_CONTENT;
+import static org.apache.jackrabbit.oak.InitialContentHelper.INITIAL_CONTENT;
 import static org.apache.jackrabbit.oak.spi.filter.PathFilter.PROP_EXCLUDED_PATHS;
 import static org.apache.jackrabbit.oak.spi.filter.PathFilter.PROP_INCLUDED_PATHS;
 import static org.hamcrest.CoreMatchers.containsString;
@@ -78,7 +78,6 @@ import java.io.InputStream;
 import java.text.ParseException;
 import java.util.Calendar;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -93,7 +92,6 @@ import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.CountingInputStream;
@@ -126,7 +124,7 @@ import org.apache.jackrabbit.oak.plugins.memory.ArrayBasedBlob;
 import org.apache.jackrabbit.oak.plugins.memory.MemoryNodeStore;
 import org.apache.jackrabbit.oak.plugins.memory.PropertyStates;
 import org.apache.jackrabbit.oak.plugins.nodetype.TypeEditorProvider;
-import org.apache.jackrabbit.oak.InitialContent;
+import org.apache.jackrabbit.oak.InitialContentHelper;
 import org.apache.jackrabbit.oak.plugins.nodetype.write.NodeTypeRegistry;
 import org.apache.jackrabbit.oak.query.AbstractQueryTest;
 import org.apache.jackrabbit.oak.spi.commit.CommitInfo;
@@ -189,9 +187,8 @@ public class LucenePropertyIndexTest extends AbstractQueryTest {
         editorProvider = new LuceneIndexEditorProvider(copier, new ExtractedTextCache(10* FileUtils.ONE_MB, 100));
         provider = new LuceneIndexProvider(copier);
         queryIndexProvider = new ResultCountingIndexProvider(provider);
-        nodeStore = new MemoryNodeStore();
+        nodeStore = new MemoryNodeStore(InitialContentHelper.INITIAL_CONTENT);
         return new Oak(nodeStore)
-                .with(new InitialContent())
                 .with(new OpenSecurityProvider())
                 .with(queryIndexProvider)
                 .with((Observer) provider)

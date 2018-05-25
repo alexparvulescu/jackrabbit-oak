@@ -47,11 +47,11 @@ public final class OakInitializer {
 
     public static void initialize(@Nonnull NodeStore store,
                                   @Nonnull RepositoryInitializer initializer,
-                                  @Nonnull IndexEditorProvider indexEditor) {
+                                  @Nonnull CommitHook hook) {
         try {
             NodeBuilder builder = store.getRoot().builder();
             initializer.initialize(builder);
-            store.merge(builder, createHook(indexEditor), createCommitInfo());
+            store.merge(builder, hook, createCommitInfo());
         } catch (CommitFailedException e) {
             throw new RuntimeException(e);
         }

@@ -34,11 +34,17 @@ import org.apache.jackrabbit.oak.api.PropertyValue;
 import org.apache.jackrabbit.oak.api.ResultRow;
 import org.apache.jackrabbit.oak.api.Tree;
 import org.apache.jackrabbit.oak.InitialContent;
+import org.apache.jackrabbit.oak.InitialContentHelper;
 import org.apache.jackrabbit.oak.query.AbstractQueryTest;
 import org.apache.jackrabbit.oak.spi.lifecycle.RepositoryInitializer;
+import org.apache.jackrabbit.oak.plugins.memory.MemoryNodeBuilder;
+import org.apache.jackrabbit.oak.plugins.memory.MemoryNodeStore;
 import org.apache.jackrabbit.oak.plugins.memory.PropertyValues;
+import org.apache.jackrabbit.oak.plugins.name.NamespaceEditorProvider;
+import org.apache.jackrabbit.oak.plugins.nodetype.TypeEditorProvider;
 import org.apache.jackrabbit.oak.spi.security.OpenSecurityProvider;
 import org.apache.jackrabbit.oak.spi.state.NodeBuilder;
+import org.apache.jackrabbit.oak.spi.state.NodeStore;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -63,7 +69,8 @@ public class PropertyIndexQueryTest extends AbstractQueryTest {
      */
     @Nonnull
     Oak getOakRepositoryInstance() {
-        return new Oak().with(new InitialContent())
+        NodeStore store = new MemoryNodeStore(InitialContentHelper.INITIAL_CONTENT);
+        return new Oak(store)
             .with(new OpenSecurityProvider())
             .with(new PropertyIndexProvider())
             .with(new PropertyIndexEditorProvider());

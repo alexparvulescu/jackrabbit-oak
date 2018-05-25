@@ -504,19 +504,6 @@ public class Oak {
     @Nonnull
     public Oak with(@Nonnull SecurityProvider securityProvider) {
         this.securityProvider = checkNotNull(securityProvider);
-        if (securityProvider instanceof WhiteboardAware) {
-            ((WhiteboardAware) securityProvider).setWhiteboard(whiteboard);
-        }
-        for (SecurityConfiguration sc : securityProvider.getConfigurations()) {
-            RepositoryInitializer ri = sc.getRepositoryInitializer();
-            if (ri != RepositoryInitializer.DEFAULT) {
-                initializers.add(ri);
-            }
-
-            for (ThreeWayConflictHandler tch : sc.getConflictHandlers()) {
-                with(tch);
-            }
-        }
         return this;
     }
 
@@ -573,9 +560,6 @@ public class Oak {
     @Nonnull
     public Oak with(@Nonnull Whiteboard whiteboard) {
         this.whiteboard = checkNotNull(whiteboard);
-        if (securityProvider instanceof WhiteboardAware) {
-            ((WhiteboardAware) securityProvider).setWhiteboard(whiteboard);
-        }
         QueryEngineSettings queryEngineSettings = WhiteboardUtils.getService(whiteboard, QueryEngineSettings.class);
         if (queryEngineSettings != null) {
             this.queryEngineSettings = new AnnotatedQueryEngineSettings(queryEngineSettings);
@@ -679,19 +663,41 @@ public class Oak {
     }
 
     private ContentRepository createNewContentRepository() {
+
+        if (securityProvider instanceof WhiteboardAware) {
+            ((WhiteboardAware) securityProvider).setWhiteboard(whiteboard);
+        }
+        for (SecurityConfiguration sc : securityProvider.getConfigurations()) {
+            RepositoryInitializer ri = sc.getRepositoryInitializer();
+            if (ri != RepositoryInitializer.DEFAULT) {
+                initializers.add(ri);
+            }
+
+            for (ThreeWayConflictHandler tch : sc.getConflictHandlers()) {
+                with(tch);
+            }
+        }
+
         final RepoStateCheckHook repoStateCheckHook = new RepoStateCheckHook();
         final List<Registration> regs = Lists.newArrayList();
         regs.add(whiteboard.register(Executor.class, getExecutor(), Collections.emptyMap()));
 
         IndexEditorProvider indexEditors = CompositeIndexEditorProvider.compose(indexEditorProviders);
-        OakInitializer.initialize(store, new CompositeInitializer(initializers), indexEditors);
+
+        // force serialize editors
+        withEditorHook();
+
+        List<CommitHook> preHooks = new ArrayList<CommitHook>(commitHooks);
+        EditorProvider iup = new IndexUpdateProvider(indexEditors);
+        preHooks.add(new EditorHook(iup));
+
+        CommitHook hook = CompositeHook.compose(preHooks);
+
+        OakInitializer.initialize(store, new CompositeInitializer(initializers), hook);
 
         QueryIndexProvider indexProvider = CompositeQueryIndexProvider.compose(queryIndexProviders);
 
         commitHooks.add(repoStateCheckHook);
-        List<CommitHook> initHooks = new ArrayList<CommitHook>(commitHooks);
-        initHooks.add(new EditorHook(CompositeEditorProvider
-                .compose(editorProviders)));
 
         if (asyncTasks != null) {
             IndexMBeanRegistration indexRegistration = new IndexMBeanRegistration(
@@ -744,8 +750,7 @@ public class Oak {
                 workspaceInitializers, store, defaultWorkspaceName, indexEditors);
 
         // add index hooks later to prevent the OakInitializer to do excessive indexing
-        with(new IndexUpdateProvider(indexEditors, failOnMissingIndexProvider));
-        withEditorHook();
+        commitHooks.add(new EditorHook(new IndexUpdateProvider(indexEditors, failOnMissingIndexProvider)));
 
         // Register observer last to prevent sending events while initialising
         for (Observer observer : observers) {
