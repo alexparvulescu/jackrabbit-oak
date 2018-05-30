@@ -60,13 +60,14 @@ public final class OakInitializer {
     public static void initialize(@Nonnull Iterable<WorkspaceInitializer> initializer,
                                   @Nonnull NodeStore store,
                                   @Nonnull String workspaceName,
-                                  @Nonnull IndexEditorProvider indexEditor) {
+                                  @Nonnull CommitHook hook) {
+//                                  @Nonnull IndexEditorProvider indexEditor) {
         NodeBuilder builder = store.getRoot().builder();
         for (WorkspaceInitializer wspInit : initializer) {
             wspInit.initialize(builder, workspaceName);
         }
         try {
-            store.merge(builder, createHook(indexEditor), createCommitInfo());
+            store.merge(builder, hook /* createHook(indexEditor) */, createCommitInfo());
         } catch (CommitFailedException e) {
             throw new RuntimeException(e);
         }
