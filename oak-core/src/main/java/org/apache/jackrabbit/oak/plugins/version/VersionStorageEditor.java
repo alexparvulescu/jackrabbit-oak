@@ -46,22 +46,31 @@ class VersionStorageEditor extends DefaultEditor {
     private final NodeBuilder workspaceRoot;
     private final NodeBuilder builder;
     private final String path;
+    private boolean initPhase;
     private ReadWriteVersionManager vMgr;
 
     VersionStorageEditor(@Nonnull NodeBuilder versionStorageNode,
                          @Nonnull NodeBuilder workspaceRoot) {
-        this(versionStorageNode, workspaceRoot, versionStorageNode,
-                VERSION_STORE_PATH);
+        this(versionStorageNode, workspaceRoot, versionStorageNode, VERSION_STORE_PATH, false);
     }
 
     private VersionStorageEditor(@Nonnull NodeBuilder versionStorageNode,
                                  @Nonnull NodeBuilder workspaceRoot,
                                  @Nonnull NodeBuilder builder,
-                                 @Nonnull String path) {
+                                 @Nonnull String path,
+                                 boolean initPhase) {
         this.versionStorageNode = checkNotNull(versionStorageNode);
         this.workspaceRoot = checkNotNull(workspaceRoot);
         this.builder = checkNotNull(builder);
         this.path = checkNotNull(path);
+        this.initPhase = initPhase;
+    }
+
+    @Override
+    public void enter(NodeState before, NodeState after) throws CommitFailedException {
+        if (VERSION_STORE_PATH.equals(path)) {
+            initPhase = isInitializationPhase(before, after);
+        }
     }
 
     @Override
@@ -78,8 +87,7 @@ class VersionStorageEditor extends DefaultEditor {
         if (d < VERSION_HISTORY_DEPTH && !isVersionStorageNode(after)) {
             return null;
         }
-        return new VersionStorageEditor(versionStorageNode, workspaceRoot,
-                builder.child(name), p);
+        return new VersionStorageEditor(versionStorageNode, workspaceRoot, builder.child(name), p, initPhase);
     }
 
     @Override
@@ -90,6 +98,10 @@ class VersionStorageEditor extends DefaultEditor {
         // is made to create rep:versionStorage nodes manually.
         if (d == getDepth(VERSION_STORE_PATH) &&
                 !isVersionStorageNode(after)) {
+            return null;
+        }
+        // allow node addition during initialization phase
+        if (initPhase) {
             return null;
         }
         return throwProtected(name);
@@ -157,4 +169,9 @@ class VersionStorageEditor extends DefaultEditor {
     private Editor throwProtected(String name) throws CommitFailedException {
         return Utils.throwProtected(concat(path, name));
     }
+
+    private static boolean isInitializationPhase(NodeState before, NodeState after) {
+        return !before.hasProperty(":initialized") && after.hasProperty(":initialized");
+    }
+
 }

@@ -39,12 +39,22 @@ import org.apache.jackrabbit.oak.plugins.index.IndexEditorProvider;
 import org.apache.jackrabbit.oak.plugins.index.property.PropertyIndexEditorProvider;
 import org.apache.jackrabbit.oak.plugins.index.reference.ReferenceEditorProvider;
 import org.apache.jackrabbit.oak.plugins.memory.MemoryNodeStore;
+import org.apache.jackrabbit.oak.plugins.name.NamespaceEditorProvider;
+import org.apache.jackrabbit.oak.plugins.nodetype.TypeEditorProvider;
+import org.apache.jackrabbit.oak.plugins.version.VersionHook;
 import org.apache.jackrabbit.oak.spi.commit.CommitContext;
 import org.apache.jackrabbit.oak.spi.commit.CommitHook;
 import org.apache.jackrabbit.oak.spi.commit.CommitInfo;
+import org.apache.jackrabbit.oak.spi.commit.CompositeEditorProvider;
+import org.apache.jackrabbit.oak.spi.commit.CompositeHook;
+import org.apache.jackrabbit.oak.spi.commit.EditorHook;
+import org.apache.jackrabbit.oak.spi.lifecycle.CompositeInitializer;
+import org.apache.jackrabbit.oak.spi.lifecycle.RepositoryInitializer;
 import org.apache.jackrabbit.oak.spi.security.OpenSecurityProvider;
+import org.apache.jackrabbit.oak.spi.security.authorization.OpenAuthorizationConfiguration;
 import org.apache.jackrabbit.oak.spi.state.NodeBuilder;
 import org.apache.jackrabbit.oak.spi.state.NodeState;
+import org.apache.jackrabbit.oak.spi.state.NodeStore;
 import org.apache.jackrabbit.oak.spi.whiteboard.DefaultWhiteboard;
 import org.apache.jackrabbit.oak.spi.whiteboard.Registration;
 import org.apache.jackrabbit.oak.spi.whiteboard.Whiteboard;
@@ -228,7 +238,36 @@ public class OakTest {
             return super.merge(builder, commitHook, info);
         }
 
-
     }
 
+    @Test
+    public void testInitialContent() throws Exception {
+        NodeStore store = new MemoryNodeStore();
+        EditorHook editors = new EditorHook(
+                new CompositeEditorProvider(new NamespaceEditorProvider(), new TypeEditorProvider()));
+        CommitHook hook = CompositeHook.compose(Lists.newArrayList( new VersionHook(), editors));
+
+        // needed because the 'rep:privileges' node does not exist so it
+        // conflicts with the jcr:system definition
+        OpenAuthorizationConfiguration oac = new OpenAuthorizationConfiguration();
+        RepositoryInitializer ris = new CompositeInitializer(new InitialContent(), oac.getRepositoryInitializer());
+        OakInitializer.initialize(store, ris, hook);
+        assertNotNull(store.getRoot());
+    }
+
+    @Test
+    public void testInitialContentWithVS() throws Exception {
+        NodeStore store = new MemoryNodeStore();
+        EditorHook editors = new EditorHook(
+                new CompositeEditorProvider(new NamespaceEditorProvider(), new TypeEditorProvider()));
+        CommitHook hook = CompositeHook.compose(Lists.newArrayList( new VersionHook(), editors));
+
+        // needed because the 'rep:privileges' node does not exist so it
+        // conflicts with the jcr:system definition
+        OpenAuthorizationConfiguration oac = new OpenAuthorizationConfiguration();
+        RepositoryInitializer ris = new CompositeInitializer(new InitialContent().withPrePopulatedVersionStore(),
+                oac.getRepositoryInitializer());
+        OakInitializer.initialize(store, ris, hook);
+        assertNotNull(store.getRoot());
+    }
 }
