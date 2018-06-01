@@ -690,6 +690,7 @@ public class Oak {
         commitHooks.add(repoStateCheckHook);
 
         List<CommitHook> preHooks = new ArrayList<CommitHook>(commitHooks);
+        // TODO is this needed?
         preHooks.add(0, ResetCommitAttributeHook.INSTANCE);
         preHooks.add(new EditorHook(new IndexUpdateProvider(indexEditors)));
 
