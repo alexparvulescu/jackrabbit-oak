@@ -16,12 +16,20 @@
  */
 package org.apache.jackrabbit.oak.plugins.name;
 
+import static com.google.common.collect.Sets.newHashSet;
+import static org.apache.jackrabbit.JcrConstants.JCR_SYSTEM;
+import static org.apache.jackrabbit.oak.spi.namespace.NamespaceConstants.REP_NAMESPACES;
+import static org.apache.jackrabbit.oak.spi.namespace.NamespaceConstants.REP_NSDATA;
+import static org.apache.jackrabbit.oak.spi.namespace.NamespaceConstants.REP_PREFIXES;
+
+import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.jackrabbit.oak.api.CommitFailedException;
 import org.apache.jackrabbit.oak.api.PropertyState;
 import org.apache.jackrabbit.oak.api.Type;
 import org.apache.jackrabbit.oak.commons.PathUtils;
+import org.apache.jackrabbit.oak.plugins.memory.EmptyNodeState;
 import org.apache.jackrabbit.oak.spi.commit.DefaultValidator;
 import org.apache.jackrabbit.oak.spi.commit.Validator;
 import org.apache.jackrabbit.oak.spi.state.NodeState;
@@ -31,10 +39,17 @@ import org.apache.jackrabbit.oak.spi.state.NodeState;
  */
 class NameValidator extends DefaultValidator {
 
+    private final NodeState namespaces;
     private final Set<String> prefixes;
+
+    NameValidator(NodeState root) {
+        this.namespaces = root.getChildNode(JCR_SYSTEM).getChildNode(REP_NAMESPACES);
+        prefixes = newHashSet(namespaces.getChildNode(REP_NSDATA).getStrings(REP_PREFIXES));
+    }
 
     NameValidator(Set<String> prefixes) {
         this.prefixes = prefixes;
+        this.namespaces = EmptyNodeState.EMPTY_NODE;
     }
 
     // escape non-printable non-USASCII characters using standard Java escapes
@@ -65,9 +80,9 @@ class NameValidator extends DefaultValidator {
         int colon = name.indexOf(':');
         if (colon > 0) {
             String prefix = name.substring(0, colon);
-            if (prefix.isEmpty() || !prefixes.contains(prefix)) {
+            if ( (prefix.isEmpty() || !prefixes.contains(prefix)) && !exists(namespaces, prefix)) {
                 throw new CommitFailedException(
-                        CommitFailedException.NAME, 1, "Invalid namespace prefix("+prefixes+"): " + prefix);
+                        CommitFailedException.NAME, 1, "Invalid namespace prefix("+collectPrefs(namespaces, prefixes)+"): " + prefix);
             }
         }
 
@@ -91,6 +106,21 @@ class NameValidator extends DefaultValidator {
             throw new CommitFailedException(
                     CommitFailedException.NAME, 3, "Invalid name: " + getPrintableName(name));
         }
+    }
+
+    private static Set<String> collectPrefs(NodeState ns, Set<String> prefixes) {
+        Set<String> all = new HashSet<>();
+        all.addAll(prefixes);
+        for (PropertyState ps : ns.getProperties()) {
+            if (!prefixes.contains(ps.getName())) {
+                all.add(ps.getName() + "*");
+            }
+        }
+        return all;
+    }
+
+    private static boolean exists(NodeState namespaces, String prefix) {
+        return namespaces.hasProperty(prefix);
     }
 
     protected void checkValidValue(PropertyState property)

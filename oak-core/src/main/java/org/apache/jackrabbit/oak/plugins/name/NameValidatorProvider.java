@@ -23,12 +23,6 @@ import org.apache.jackrabbit.oak.spi.commit.ValidatorProvider;
 import org.apache.jackrabbit.oak.spi.state.NodeState;
 import org.osgi.service.component.annotations.Component;
 
-import static com.google.common.collect.Sets.newHashSet;
-import static org.apache.jackrabbit.JcrConstants.JCR_SYSTEM;
-import static org.apache.jackrabbit.oak.spi.namespace.NamespaceConstants.REP_NAMESPACES;
-import static org.apache.jackrabbit.oak.spi.namespace.NamespaceConstants.REP_NSDATA;
-import static org.apache.jackrabbit.oak.spi.namespace.NamespaceConstants.REP_PREFIXES;
-
 /**
  * Validator service that checks that all node and property names as well
  * as any name values are syntactically valid and that any namespace prefixes
@@ -38,13 +32,8 @@ import static org.apache.jackrabbit.oak.spi.namespace.NamespaceConstants.REP_PRE
 public class NameValidatorProvider extends ValidatorProvider {
 
     @Override
-    public Validator getRootValidator(
-            NodeState before, NodeState after, CommitInfo info) {
-        return new NameValidator(newHashSet(after
-                .getChildNode(JCR_SYSTEM)
-                .getChildNode(REP_NAMESPACES)
-                .getChildNode(REP_NSDATA)
-                .getStrings(REP_PREFIXES)));
+    public Validator getRootValidator(NodeState before, NodeState after, CommitInfo info) {
+        return new NameValidator(after);
     }
 
 }
