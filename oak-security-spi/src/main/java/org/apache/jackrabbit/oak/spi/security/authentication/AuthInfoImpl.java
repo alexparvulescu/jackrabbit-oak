@@ -17,7 +17,9 @@
 package org.apache.jackrabbit.oak.spi.security.authentication;
 
 import java.security.Principal;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -42,7 +44,8 @@ public final class AuthInfoImpl implements AuthInfo {
                         @Nullable Set<? extends Principal> principals) {
         this.userID = userID;
         this.attributes = (attributes == null) ? Collections.<String, Object>emptyMap() : attributes;
-        this.principals = (principals == null) ? Collections.<Principal>emptySet() : Collections.unmodifiableSet(principals);
+        this.principals = (principals == null) ? Collections.<Principal>emptySet() : new SneakySet(principals);
+        /* Collections.unmodifiableSet(principals) */
     }
 
     public static AuthInfo createFromSubject(@NotNull Subject subject) {
@@ -85,5 +88,88 @@ public final class AuthInfoImpl implements AuthInfo {
     @Override
     public Set<Principal> getPrincipals() {
         return principals;
+    }
+
+    private static class SneakySet implements Set<Principal> {
+
+        private final Set<? extends Principal> principals;
+
+        // TODO not sure if this is really avail
+        private final boolean empty;
+
+        public SneakySet(Set<? extends Principal> principals) {
+            this.principals = Collections.unmodifiableSet(principals);
+            this.empty = principals.isEmpty();
+        }
+
+        @Override
+        public boolean contains(Object o) {
+            return principals.contains(o);
+        }
+
+        @Override
+        public boolean containsAll(Collection<?> c) {
+            for (Object o : c) {
+                if (!contains(o)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        @Override
+        public int size() {
+            throw new UnsupportedOperationException("size");
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return empty;
+        }
+
+        @Override
+        public Iterator<Principal> iterator() {
+            throw new UnsupportedOperationException("iterator");
+        }
+
+        @Override
+        public Object[] toArray() {
+            throw new UnsupportedOperationException("toArray");
+        }
+
+        @Override
+        public <T> T[] toArray(T[] a) {
+            throw new UnsupportedOperationException("toArray");
+        }
+
+        @Override
+        public boolean add(Principal e) {
+            throw new UnsupportedOperationException("add");
+        }
+
+        @Override
+        public boolean remove(Object o) {
+            throw new UnsupportedOperationException("remove");
+        }
+
+        @Override
+        public boolean addAll(Collection<? extends Principal> c) {
+            throw new UnsupportedOperationException("addAll");
+        }
+
+        @Override
+        public boolean retainAll(Collection<?> c) {
+            throw new UnsupportedOperationException("retainAll");
+        }
+
+        @Override
+        public boolean removeAll(Collection<?> c) {
+            throw new UnsupportedOperationException("removeAll");
+        }
+
+        @Override
+        public void clear() {
+            throw new UnsupportedOperationException("clear");
+        }
     }
 }

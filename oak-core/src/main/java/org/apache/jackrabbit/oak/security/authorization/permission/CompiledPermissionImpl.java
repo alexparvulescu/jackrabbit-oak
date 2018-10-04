@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterators;
+
 import org.apache.jackrabbit.JcrConstants;
 import org.apache.jackrabbit.commons.iterator.AbstractLazyIterator;
 import org.apache.jackrabbit.oak.api.PropertyState;
@@ -99,19 +101,23 @@ final class CompiledPermissionImpl implements CompiledPermissions, PermissionCon
 
         // setup
         this.store = store;
-        Set<String> userNames = new HashSet<String>(principals.size());
-        Set<String> groupNames = new HashSet<String>(principals.size());
-        for (Principal principal : principals) {
-            if (GroupPrincipals.isGroup(principal)) {
-                groupNames.add(principal.getName());
-            } else {
-                userNames.add(principal.getName());
-            }
-        }
+        // Set<String> userNames = new HashSet<String>(principals.size());
+        // Set<String> groupNames = new HashSet<String>(principals.size());
+        // for (Principal principal : principals) {
+        // if (GroupPrincipals.isGroup(principal)) {
+        // groupNames.add(principal.getName());
+        // } else {
+        // userNames.add(principal.getName());
+        // }
+        // }
+        //
+        // p0 = new PermissionEntryProviderImpl(store, userNames, options);
+        // groupStore = new PermissionEntryProviderImpl(store, groupNames,
+        // options);
 
-        userStore = new PermissionEntryProviderImpl(store, userNames, options);
-        groupStore = new PermissionEntryProviderImpl(store, groupNames, options);
-
+        // TODO no way to provide permission entries without access to principal set
+        userStore = new InvertedPermissionEntryProvider(store, principals);
+        groupStore = null;
         typeProvider = new TreeTypeProvider(ctx);
     }
 
@@ -139,7 +145,9 @@ final class CompiledPermissionImpl implements CompiledPermissions, PermissionCon
 
         store.flush(root);
         userStore.flush();
-        groupStore.flush();
+        if (groupStore != null) {
+            groupStore.flush();
+        }
     }
 
     @NotNull
@@ -415,8 +423,12 @@ final class CompiledPermissionImpl implements CompiledPermissions, PermissionCon
     @NotNull
     private Iterator<PermissionEntry> getEntryIterator(@NotNull EntryPredicate predicate) {
         Iterator<PermissionEntry> userEntries = userStore.getEntryIterator(predicate);
-        Iterator<PermissionEntry> groupEntries = groupStore.getEntryIterator(predicate);
-        return concat(userEntries, groupEntries);
+        if (groupStore != null) {
+            Iterator<PermissionEntry> groupEntries = groupStore.getEntryIterator(predicate);
+            return concat(userEntries, groupEntries);
+        } else {
+            return userEntries;
+        }
     }
 
     @Nullable
@@ -573,6 +585,9 @@ final class CompiledPermissionImpl implements CompiledPermissions, PermissionCon
         }
 
         private Iterator<PermissionEntry> getGroupEntries() {
+            if (groupStore == null) {
+                return Collections.emptyIterator();
+            }
             if (groupEntries == null) {
                 groupEntries = groupStore.getEntries(tree);
             }

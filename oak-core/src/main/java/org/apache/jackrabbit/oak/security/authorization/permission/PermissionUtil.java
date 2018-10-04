@@ -28,6 +28,7 @@ import org.apache.jackrabbit.oak.plugins.tree.ReadOnly;
 import org.apache.jackrabbit.oak.spi.security.ConfigurationParameters;
 import org.apache.jackrabbit.oak.spi.security.authorization.permission.PermissionConstants;
 import org.apache.jackrabbit.oak.spi.security.principal.AdminPrincipal;
+import org.apache.jackrabbit.oak.spi.security.principal.PrincipalImpl;
 import org.apache.jackrabbit.oak.spi.security.principal.SystemPrincipal;
 import org.apache.jackrabbit.oak.spi.state.NodeBuilder;
 import org.apache.jackrabbit.util.Text;
@@ -85,9 +86,14 @@ public final class PermissionUtil implements PermissionConstants {
         if (principals.contains(SystemPrincipal.INSTANCE)) {
             return true;
         } else {
-            Set<String> adminNames = config.getConfigValue(PARAM_ADMINISTRATIVE_PRINCIPALS, Collections.EMPTY_SET);
-            for (Principal principal : principals) {
-                if (principal instanceof AdminPrincipal || adminNames.contains(principal.getName())) {
+            Set<String> adminNames = config.getConfigValue(PARAM_ADMINISTRATIVE_PRINCIPALS, Collections.singleton("admin"));
+//            for (Principal principal : principals) {
+//                if (principal instanceof AdminPrincipal || adminNames.contains(principal.getName())) {
+//                    return true;
+//                }
+//            }
+            for (String principal : adminNames) {
+                if (principals.contains(new PrincipalImpl(principal))) {
                     return true;
                 }
             }

@@ -17,6 +17,7 @@
 package org.apache.jackrabbit.oak.security.authorization.permission;
 
 import java.util.Collection;
+import java.util.Collections;
 
 import org.apache.jackrabbit.oak.api.Root;
 import org.jetbrains.annotations.NotNull;
@@ -49,4 +50,8 @@ interface PermissionStore {
 
     void flush(@NotNull Root root);
 
+    @Nullable
+    default Collection<PermissionEntry> loadByPath(@NotNull String path) {
+        return Collections.emptyList();
+    }
 }

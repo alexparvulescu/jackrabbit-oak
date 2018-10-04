@@ -32,6 +32,7 @@ import org.apache.jackrabbit.oak.api.AuthInfo;
 import org.apache.jackrabbit.oak.api.ContentSession;
 import org.apache.jackrabbit.oak.spi.security.authentication.AuthInfoImpl;
 import org.apache.jackrabbit.oak.spi.security.authentication.SystemSubject;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -62,6 +63,7 @@ public class PreAuthTest extends AbstractSecurityTest {
         };
     }
 
+    @Ignore
     @Test
     public void testValidSubject() throws Exception {
         final Subject subject = new Subject(true, principals, Collections.<Object>emptySet(), Collections.<Object>emptySet());
@@ -88,6 +90,7 @@ public class PreAuthTest extends AbstractSecurityTest {
         }
     }
 
+    @Ignore
     @Test
     public void testValidSubjectWithCredentials() throws Exception {
         Set<SimpleCredentials> publicCreds = Collections.singleton(new SimpleCredentials("testUserId", new char[0]));
@@ -115,6 +118,7 @@ public class PreAuthTest extends AbstractSecurityTest {
         }
     }
 
+    @Ignore
     @Test
     public void testValidReadSubjectWithCredentials() throws Exception {
         Set<SimpleCredentials> publicCreds = Collections.singleton(new SimpleCredentials("testUserId", new char[0]));
@@ -201,6 +205,7 @@ public class PreAuthTest extends AbstractSecurityTest {
         }
     }
 
+    @Ignore
     @Test
     public void testSystemSubject() throws Exception {
         ContentSession cs = Subject.doAsPrivileged(SystemSubject.INSTANCE, new PrivilegedAction<ContentSession>() {

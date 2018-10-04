@@ -54,6 +54,8 @@ final class PermissionEntry implements Comparable<PermissionEntry>, PermissionCo
      */
     final RestrictionPattern restriction;
 
+    private String principal;
+
     PermissionEntry(@NotNull String path, boolean isAllow, int index,
                     @NotNull PrivilegeBits privilegeBits,
                     @NotNull RestrictionPattern restriction) {
@@ -120,5 +122,13 @@ final class PermissionEntry implements Comparable<PermissionEntry>, PermissionCo
     @Override
     public int hashCode() {
         return Objects.hashCode(privilegeBits, index, path, isAllow, restriction);
+    }
+
+    public String getPrincipal() {
+        return principal;
+    }
+
+    public void setPrincipal(String principal) {
+        this.principal = principal;
     }
 }
