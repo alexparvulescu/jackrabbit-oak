@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -42,7 +43,13 @@ class PrincipalPermissionEntries {
      * map of permission entries, accessed by path
      */
     private Map<String, Collection<PermissionEntry>> entries = new HashMap<>();
-    private Set<String> emptyPaths = new HashSet();
+
+    private static final int MAX = Integer.getInteger("oak.PrincipalPermissionEntries", 1000);
+
+    private static final boolean USE_MAP = Boolean.getBoolean("oak.PrincipalPermissionEntries.map");
+
+    private final Map<String, Boolean> emptyPathsM;
+    private final Set<String> emptyPathsS;
 
     PrincipalPermissionEntries() {
         this(Long.MAX_VALUE);
@@ -51,10 +58,23 @@ class PrincipalPermissionEntries {
     PrincipalPermissionEntries(long expectedSize) {
         this.expectedSize = expectedSize;
         fullyLoaded = (expectedSize == 0);
+
+        if(USE_MAP) {
+            emptyPathsM = new LinkedHashMap<String, Boolean>() {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, Boolean> eldest) {
+                    return size() > MAX;
+                }
+            };
+            emptyPathsS = null;
+        } else {
+            emptyPathsM = null;
+            emptyPathsS = new HashSet<>();
+        }
     }
 
     long getSize() {
-        return entries.size() + emptyPaths.size();
+        return entries.size();
     }
 
     boolean isFullyLoaded() {
@@ -72,7 +92,7 @@ class PrincipalPermissionEntries {
 
     @Nullable
     Collection<PermissionEntry> getEntriesByPath(@NotNull String path) {
-        return (emptyPaths.contains(path)) ? Collections.emptySet() : entries.get(path);
+        return containsEmpty(path) ? Collections.emptySet() : entries.get(path);
     }
 
     void putEntriesByPath(@NotNull String path, @NotNull Collection<PermissionEntry> pathEntries) {
@@ -82,8 +102,20 @@ class PrincipalPermissionEntries {
         }
     }
 
+    private boolean containsEmpty(String path) {
+        if (USE_MAP) {
+            return emptyPathsM.containsKey(path);
+        } else {
+            return emptyPathsS.contains(path);
+        }
+    }
+
     void rememberNotAccessControlled(@NotNull String path) {
-        emptyPaths.add(path);
+        if (USE_MAP) {
+            emptyPathsM.put(path, null);
+        } else {
+            emptyPathsS.add(path);
+        }
     }
 
     void putAllEntries(@NotNull Map<String, Collection<PermissionEntry>> allEntries) {
