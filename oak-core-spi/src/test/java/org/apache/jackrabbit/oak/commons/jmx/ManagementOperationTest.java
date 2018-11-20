@@ -20,7 +20,6 @@
 package org.apache.jackrabbit.oak.commons.jmx;
 
 import static com.google.common.util.concurrent.MoreExecutors.listeningDecorator;
-import static com.google.common.util.concurrent.MoreExecutors.sameThreadExecutor;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.sleep;
 import static java.util.concurrent.Executors.newCachedThreadPool;
@@ -28,6 +27,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.jackrabbit.oak.api.jmx.RepositoryManagementMBean.StatusCode.FAILED;
 import static org.apache.jackrabbit.oak.api.jmx.RepositoryManagementMBean.StatusCode.RUNNING;
 import static org.apache.jackrabbit.oak.api.jmx.RepositoryManagementMBean.StatusCode.SUCCEEDED;
+import static org.apache.jackrabbit.oak.commons.guava.MoreExecutorsCompat.directExecutor;
 import static org.apache.jackrabbit.oak.commons.jmx.ManagementOperation.newManagementOperation;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -65,7 +65,7 @@ public class ManagementOperationTest {
         ManagementOperation<Integer> op = ManagementOperation.done("test", 42);
         assertTrue(op.isDone());
         assertEquals(42, (int) op.get());
-        sameThreadExecutor().execute(op);
+        directExecutor().execute(op);
     }
 
     @Test

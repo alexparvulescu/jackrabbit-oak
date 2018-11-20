@@ -27,12 +27,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.StringJoiner;
 
-import com.google.common.base.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static com.google.common.base.Objects.ToStringHelper;
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // !! THIS UTILITY CLASS IS A COPY FROM APACHE SLING !!
@@ -258,7 +256,7 @@ public final class PropertiesUtil {
 
         // Set all configured bean properties
         Map<String, Method> setters = getSetters(objectClass);
-        ToStringHelper toStringHelper = Objects.toStringHelper(instance);
+        StringJoiner toStringHelper = new StringJoiner(", ", instance.getClass().getSimpleName() + "{", "}");
         for(Map.Entry<String,?> e : config.entrySet()) {
             String name = e.getKey();
             Method setter = setters.get(name);
@@ -269,7 +267,7 @@ public final class PropertiesUtil {
                 }
                 Object value = e.getValue();
                 setProperty(instance, name, setter, value);
-                toStringHelper.add(name,value);
+                toStringHelper.add(name + "=" + value);
             } else if (validate) {
                 throw new IllegalArgumentException(
                         "Configured class " + objectClass.getName()

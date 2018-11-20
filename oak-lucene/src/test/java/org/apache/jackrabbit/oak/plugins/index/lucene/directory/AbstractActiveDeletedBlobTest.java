@@ -70,7 +70,7 @@ public abstract class AbstractActiveDeletedBlobTest extends AbstractQueryTest {
     @Rule
     public TemporaryFolder fileDataStoreRoot = new TemporaryFolder(new File("target"));
 
-    protected ExecutorService executorService = MoreExecutors.sameThreadExecutor();
+    protected ExecutorService executorService = MoreExecutors.newDirectExecutorService();
 
     protected CountingBlobStore blobStore = null;
 

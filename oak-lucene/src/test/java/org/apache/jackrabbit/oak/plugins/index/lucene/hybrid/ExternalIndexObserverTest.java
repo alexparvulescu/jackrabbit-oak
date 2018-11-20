@@ -175,7 +175,7 @@ public class ExternalIndexObserverTest {
     @Test
     public void builder() throws Exception{
         ExternalObserverBuilder builder =
-                new ExternalObserverBuilder(queue, tracker,NOOP, MoreExecutors.sameThreadExecutor(), 10);
+                new ExternalObserverBuilder(queue, tracker,NOOP, MoreExecutors.directExecutor(), 10);
         Observer o = builder.build();
         o.contentChanged(INITIAL_CONTENT, CommitInfo.EMPTY_EXTERNAL);
         verifyZeroInteractions(queue);
@@ -184,7 +184,7 @@ public class ExternalIndexObserverTest {
     @Test
     public void builder_NonFiltered() throws Exception{
         ExternalObserverBuilder builder =
-                new ExternalObserverBuilder(queue, tracker,NOOP, MoreExecutors.sameThreadExecutor(), 10);
+                new ExternalObserverBuilder(queue, tracker,NOOP, MoreExecutors.directExecutor(), 10);
         assertIndexing(builder.build());
     }
 

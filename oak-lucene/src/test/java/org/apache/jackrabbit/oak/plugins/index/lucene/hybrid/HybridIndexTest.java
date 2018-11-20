@@ -100,7 +100,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import static com.google.common.collect.ImmutableList.of;
-import static com.google.common.util.concurrent.MoreExecutors.sameThreadExecutor;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static org.apache.jackrabbit.oak.api.QueryEngine.NO_BINDINGS;
 import static org.apache.jackrabbit.oak.spi.mount.Mounts.defaultMountInfoProvider;
 import static org.hamcrest.CoreMatchers.containsString;
@@ -149,7 +149,7 @@ public class HybridIndexTest extends AbstractQueryTest {
         LuceneIndexReaderFactory indexReaderFactory = new DefaultIndexReaderFactory(mip, copier);
         IndexTracker tracker = new IndexTracker(indexReaderFactory,nrtIndexFactory);
         luceneIndexProvider = new LuceneIndexProvider(tracker);
-        queue = new DocumentQueue(100, tracker, sameThreadExecutor());
+        queue = new DocumentQueue(100, tracker, directExecutor());
         LuceneIndexEditorProvider editorProvider = new LuceneIndexEditorProvider(copier,
                 tracker,
                 null,

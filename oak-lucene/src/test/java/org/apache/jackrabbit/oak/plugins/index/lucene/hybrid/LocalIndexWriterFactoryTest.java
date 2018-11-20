@@ -42,7 +42,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import static com.google.common.util.concurrent.MoreExecutors.sameThreadExecutor;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static org.apache.jackrabbit.oak.plugins.memory.EmptyNodeState.EMPTY_NODE;
 import static org.apache.jackrabbit.oak.InitialContentHelper.INITIAL_CONTENT;
 import static org.junit.Assert.*;
@@ -60,7 +60,7 @@ public class LocalIndexWriterFactoryTest {
     @Before
     public void setUp() throws IOException {
         tracker = new IndexTracker();
-        DocumentQueue queue = new DocumentQueue(100, tracker, sameThreadExecutor());
+        DocumentQueue queue = new DocumentQueue(100, tracker, directExecutor());
         editorProvider = new LuceneIndexEditorProvider(
                 null,
                 null,
@@ -148,7 +148,7 @@ public class LocalIndexWriterFactoryTest {
     public void inMemoryDocLimit() throws Exception{
         NodeState indexed = createAndPopulateAsyncIndex(FulltextIndexConstants.IndexingMode.NRT);
         editorProvider.setInMemoryDocsLimit(5);
-        editorProvider.setIndexingQueue(new DocumentQueue(1, tracker, sameThreadExecutor()));
+        editorProvider.setIndexingQueue(new DocumentQueue(1, tracker, directExecutor()));
         builder = indexed.builder();
         for (int i = 0; i < 10; i++) {
             builder.child("b" + i).setProperty("foo", "bar");

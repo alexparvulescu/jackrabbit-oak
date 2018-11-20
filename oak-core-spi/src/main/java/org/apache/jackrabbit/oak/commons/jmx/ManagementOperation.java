@@ -19,7 +19,7 @@
 
 package org.apache.jackrabbit.oak.commons.jmx;
 
-import static com.google.common.base.Objects.toStringHelper;
+
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.Thread.currentThread;
 import static javax.management.openmbean.SimpleType.INTEGER;
@@ -31,6 +31,7 @@ import static org.apache.jackrabbit.oak.api.jmx.RepositoryManagementMBean.Status
 import static org.apache.jackrabbit.oak.api.jmx.RepositoryManagementMBean.StatusCode.RUNNING;
 import static org.apache.jackrabbit.oak.api.jmx.RepositoryManagementMBean.StatusCode.SUCCEEDED;
 import static org.apache.jackrabbit.oak.api.jmx.RepositoryManagementMBean.StatusCode.UNAVAILABLE;
+import static org.apache.jackrabbit.oak.commons.guava.MoreObjectsCompat.toStringHelper;
 import static org.apache.jackrabbit.oak.commons.jmx.ManagementOperation.Status.failed;
 import static org.apache.jackrabbit.oak.commons.jmx.ManagementOperation.Status.none;
 import static org.apache.jackrabbit.oak.commons.jmx.ManagementOperation.Status.running;

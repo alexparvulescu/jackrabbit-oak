@@ -46,7 +46,7 @@ import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.google.common.util.concurrent.MoreExecutors.sameThreadExecutor;
+import static org.apache.jackrabbit.oak.commons.guava.MoreExecutorsCompat.directExecutorService;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -102,7 +102,7 @@ public class CompositeDataStoreCacheTest extends AbstractDataStoreCacheTest {
         scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
         closer.register(new ExecutorCloser(scheduledExecutor, 500, TimeUnit.MILLISECONDS));
 
-        fileCacheExecutor = sameThreadExecutor();
+        fileCacheExecutor = directExecutorService();
 
         //cache instance
         cache =

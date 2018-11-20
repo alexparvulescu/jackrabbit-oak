@@ -16,7 +16,6 @@
  */
 package org.apache.jackrabbit.oak.jcr.delegate;
 
-import static com.google.common.base.Objects.toStringHelper;
 import static com.google.common.collect.Iterables.addAll;
 import static com.google.common.collect.Iterables.contains;
 import static com.google.common.collect.Iterators.filter;
@@ -41,6 +40,7 @@ import static org.apache.jackrabbit.oak.api.Type.BOOLEAN;
 import static org.apache.jackrabbit.oak.api.Type.NAMES;
 import static org.apache.jackrabbit.oak.api.Type.UNDEFINED;
 import static org.apache.jackrabbit.oak.api.Type.UNDEFINEDS;
+import static org.apache.jackrabbit.oak.commons.guava.MoreObjectsCompat.toStringHelper;
 import static org.apache.jackrabbit.oak.commons.PathUtils.dropIndexFromName;
 import static org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants.JCR_IS_ABSTRACT;
 import static org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants.NODE_TYPES_PATH;

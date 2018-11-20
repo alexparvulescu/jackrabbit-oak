@@ -19,7 +19,6 @@ package org.apache.jackrabbit.oak.plugins.document.util;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableSet;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientOptions;
@@ -32,6 +31,7 @@ import com.mongodb.client.MongoDatabase;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import org.apache.jackrabbit.oak.commons.guava.MoreObjectsCompat;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -151,7 +151,7 @@ public class MongoConnection {
     }
 
     public static String toString(MongoClientOptions opts) {
-        return Objects.toStringHelper(opts)
+        return MoreObjectsCompat.toStringHelper(opts)
                 .add("connectionsPerHost", opts.getConnectionsPerHost())
                 .add("connectTimeout", opts.getConnectTimeout())
                 .add("socketTimeout", opts.getSocketTimeout())

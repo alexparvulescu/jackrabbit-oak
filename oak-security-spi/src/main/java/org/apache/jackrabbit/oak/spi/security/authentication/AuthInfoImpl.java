@@ -24,8 +24,8 @@ import java.util.Set;
 import javax.jcr.SimpleCredentials;
 import javax.security.auth.Subject;
 
-import com.google.common.base.Objects;
 import org.apache.jackrabbit.oak.api.AuthInfo;
+import org.apache.jackrabbit.oak.commons.guava.MoreObjectsCompat;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -58,7 +58,7 @@ public final class AuthInfoImpl implements AuthInfo {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjectsCompat.toStringHelper(this)
             .add("userID", userID)
             .add("attributes", attributes)
             .add("principals", principals).toString();

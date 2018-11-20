@@ -16,10 +16,10 @@
  */
 package org.apache.jackrabbit.oak.plugins.document.persistentCache;
 
-import com.google.common.base.Objects;
 import org.apache.jackrabbit.api.stats.TimeSeries;
 import org.apache.jackrabbit.oak.api.jmx.PersistentCacheStatsMBean;
 import org.apache.jackrabbit.oak.commons.IOUtils;
+import org.apache.jackrabbit.oak.commons.guava.MoreObjectsCompat;
 import org.apache.jackrabbit.oak.commons.jmx.AnnotatedStandardMBean;
 import org.apache.jackrabbit.oak.stats.CounterStats;
 import org.apache.jackrabbit.oak.stats.Counting;
@@ -450,7 +450,7 @@ public class PersistentCacheStats extends AnnotatedStandardMBean implements Pers
 
     @Override
     public String cacheInfoAsString() {
-        return Objects.toStringHelper("PersistentCacheStats")
+        return MoreObjectsCompat.toStringHelper("PersistentCacheStats")
                 .add("requestCount", getRequestCount())
                 .add("hitCount", getHitCount())
                 .add("hitRate", String.format("%1.2f", getHitRate()))

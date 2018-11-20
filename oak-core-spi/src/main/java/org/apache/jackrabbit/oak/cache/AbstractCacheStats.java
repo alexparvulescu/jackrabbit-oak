@@ -24,9 +24,9 @@ import static org.apache.jackrabbit.oak.commons.IOUtils.humanReadableByteCount;
 
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.base.Objects;
 import com.google.common.cache.CacheStats;
 import org.apache.jackrabbit.oak.api.jmx.CacheStatsMBean;
+import org.apache.jackrabbit.oak.commons.guava.MoreObjectsCompat;
 import org.apache.jackrabbit.oak.commons.jmx.AnnotatedStandardMBean;
 import org.jetbrains.annotations.NotNull;
 
@@ -135,7 +135,7 @@ public abstract class AbstractCacheStats extends AnnotatedStandardMBean implemen
 
     @Override
     public String cacheInfoAsString() {
-        return Objects.toStringHelper("CacheStats")
+        return MoreObjectsCompat.toStringHelper("CacheStats")
                 .add("hitCount", getHitCount())
                 .add("hitRate", format("%1.2f", getHitRate()))
                 .add("missCount", getMissCount())

@@ -25,7 +25,7 @@ import org.apache.jackrabbit.oak.commons.PathUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static com.google.common.base.Objects.toStringHelper;
+import static org.apache.jackrabbit.oak.commons.guava.MoreObjectsCompat.toStringHelper;
 import static com.google.common.base.Preconditions.checkArgument;
 import static org.apache.jackrabbit.oak.commons.PathUtils.elements;
 import static org.apache.jackrabbit.oak.commons.PathUtils.isAbsolute;

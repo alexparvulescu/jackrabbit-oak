@@ -72,7 +72,7 @@ import org.junit.rules.TemporaryFolder;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Sets.newHashSet;
-import static com.google.common.util.concurrent.MoreExecutors.sameThreadExecutor;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static org.apache.jackrabbit.oak.InitialContentHelper.INITIAL_CONTENT;
 import static org.apache.jackrabbit.oak.plugins.index.lucene.directory.CopyOnReadDirectory.DELETE_MARGIN_MILLIS_NAME;
 import static org.apache.jackrabbit.oak.plugins.index.search.FulltextIndexConstants.INDEX_DATA_CHILD_NAME;
@@ -127,7 +127,7 @@ public class IndexCopierTest {
     public void basicTest() throws Exception{
         Directory baseDir = new RAMDirectory();
         LuceneIndexDefinition defn = new LuceneIndexDefinition(root, builder.getNodeState(), "/foo");
-        IndexCopier c1 = new RAMIndexCopier(baseDir, sameThreadExecutor(), getWorkDir());
+        IndexCopier c1 = new RAMIndexCopier(baseDir, directExecutor(), getWorkDir());
 
         Directory remote = new RAMDirectory();
         Directory wrapped = c1.wrapForRead("/foo", defn, remote, INDEX_DATA_CHILD_NAME);
@@ -160,7 +160,7 @@ public class IndexCopierTest {
             }
         };
         LuceneIndexDefinition defn = new LuceneIndexDefinition(root, builder.getNodeState(), "/foo");
-        IndexCopier c1 = new RAMIndexCopier(baseDir, sameThreadExecutor(), getWorkDir(), true);
+        IndexCopier c1 = new RAMIndexCopier(baseDir, directExecutor(), getWorkDir(), true);
 
         Directory remote = new RAMDirectory();
 
@@ -207,7 +207,7 @@ public class IndexCopierTest {
     @Test
     public void basicTestWithFS() throws Exception{
         LuceneIndexDefinition defn = new LuceneIndexDefinition(root, builder.getNodeState(), "/foo");
-        IndexCopier c1 = new IndexCopier(sameThreadExecutor(), getWorkDir());
+        IndexCopier c1 = new IndexCopier(directExecutor(), getWorkDir());
 
         Directory remote = new RAMDirectory();
         Directory wrapped = c1.wrapForRead("/foo", defn, remote, INDEX_DATA_CHILD_NAME);
@@ -237,7 +237,7 @@ public class IndexCopierTest {
     @Test
     public void multiDirNames() throws Exception{
         LuceneIndexDefinition defn = new LuceneIndexDefinition(root, builder.getNodeState(), "/foo");
-        IndexCopier c1 = new IndexCopier(sameThreadExecutor(), getWorkDir());
+        IndexCopier c1 = new IndexCopier(directExecutor(), getWorkDir());
 
         Directory remote = new CloseSafeDir();
         byte[] t1 = writeFile(remote, "t1");
@@ -256,7 +256,7 @@ public class IndexCopierTest {
     @Test
     public void deleteOldPostReindex() throws Exception{
         LuceneIndexDefinition defn = new LuceneIndexDefinition(root, builder.getNodeState(), "/foo");
-        IndexCopier c1 = new IndexCopier(sameThreadExecutor(), getWorkDir());
+        IndexCopier c1 = new IndexCopier(directExecutor(), getWorkDir());
 
         Directory remote = new CloseSafeDir();
         Directory w1 = c1.wrapForRead(indexPath, defn, remote, INDEX_DATA_CHILD_NAME);
@@ -406,7 +406,7 @@ public class IndexCopierTest {
     public void reuseLocalDir() throws Exception{
         Directory baseDir = new RAMDirectory();
         LuceneIndexDefinition defn = new LuceneIndexDefinition(root, builder.getNodeState(), "/foo");
-        IndexCopier c1 = new RAMIndexCopier(baseDir, sameThreadExecutor(), getWorkDir());
+        IndexCopier c1 = new RAMIndexCopier(baseDir, directExecutor(), getWorkDir());
 
         FileTrackingDirectory remote = new FileTrackingDirectory();
         Directory wrapped = c1.wrapForRead("/foo", defn, remote, INDEX_DATA_CHILD_NAME);
@@ -441,7 +441,7 @@ public class IndexCopierTest {
     public void deleteCorruptedFile() throws Exception{
         Directory baseDir = new RAMDirectory();
         LuceneIndexDefinition defn = new LuceneIndexDefinition(root, builder.getNodeState(), "/foo");
-        RAMIndexCopier c1 = new RAMIndexCopier(baseDir, sameThreadExecutor(), getWorkDir());
+        RAMIndexCopier c1 = new RAMIndexCopier(baseDir, directExecutor(), getWorkDir());
 
         Directory remote = new RAMDirectory(){
             @Override
@@ -471,7 +471,7 @@ public class IndexCopierTest {
 
 
         LuceneIndexDefinition defn = new LuceneIndexDefinition(root, builder.getNodeState(), "/foo");
-        IndexCopier c1 = new RAMIndexCopier(baseDir, sameThreadExecutor(), getWorkDir());
+        IndexCopier c1 = new RAMIndexCopier(baseDir, directExecutor(), getWorkDir());
 
         Directory r1 = new DelayCopyingSimpleFSDirectory();
 
@@ -514,7 +514,7 @@ public class IndexCopierTest {
         };
 
         LuceneIndexDefinition defn = new LuceneIndexDefinition(root, builder.getNodeState(), "/foo");
-        IndexCopier c1 = new RAMIndexCopier(baseDir, sameThreadExecutor(), getWorkDir());
+        IndexCopier c1 = new RAMIndexCopier(baseDir, directExecutor(), getWorkDir());
 
         Directory r1 = new DelayCopyingSimpleFSDirectory();
 
@@ -565,7 +565,7 @@ public class IndexCopierTest {
         Directory baseDir = new CloseSafeDir();
 
         LuceneIndexDefinition defn = new LuceneIndexDefinition(root, builder.getNodeState(), "/foo");
-        IndexCopier copier = new RAMIndexCopier(baseDir, sameThreadExecutor(), getWorkDir());
+        IndexCopier copier = new RAMIndexCopier(baseDir, directExecutor(), getWorkDir());
 
         //1. Open a local and read t1 from remote
         Directory remote1 = new RAMDirectory();
@@ -592,7 +592,7 @@ public class IndexCopierTest {
     public void wrapForWriteWithoutIndexPath() throws Exception{
         Directory remote = new CloseSafeDir();
 
-        IndexCopier copier = new IndexCopier(sameThreadExecutor(), getWorkDir());
+        IndexCopier copier = new IndexCopier(directExecutor(), getWorkDir());
 
         LuceneIndexDefinition defn = new LuceneIndexDefinition(root, builder.getNodeState(), "/foo");
         Directory dir = copier.wrapForWrite(defn, remote, false, INDEX_DATA_CHILD_NAME);
@@ -610,7 +610,7 @@ public class IndexCopierTest {
     public void wrapForWriteWithIndexPath() throws Exception{
         Directory remote = new CloseSafeDir();
 
-        IndexCopier copier = new IndexCopier(sameThreadExecutor(), getWorkDir());
+        IndexCopier copier = new IndexCopier(directExecutor(), getWorkDir());
 
         LuceneIndexDefinition defn = new LuceneIndexDefinition(root, builder.getNodeState(), "/foo");
         Directory dir = copier.wrapForWrite(defn, remote, false, INDEX_DATA_CHILD_NAME);
@@ -634,7 +634,7 @@ public class IndexCopierTest {
     public void copyOnWriteBasics() throws Exception{
         Directory baseDir = new CloseSafeDir();
         LuceneIndexDefinition defn = new LuceneIndexDefinition(root, builder.getNodeState(), "/foo");
-        IndexCopier copier = new RAMIndexCopier(baseDir, sameThreadExecutor(), getWorkDir());
+        IndexCopier copier = new RAMIndexCopier(baseDir, directExecutor(), getWorkDir());
 
         Directory remote = new RAMDirectory();
         byte[] t1 = writeFile(remote, "t1");
@@ -694,7 +694,7 @@ public class IndexCopierTest {
     public void cowExistingLocalFileNotDeleted() throws Exception{
         Directory baseDir = new CloseSafeDir();
         LuceneIndexDefinition defn = new LuceneIndexDefinition(root, builder.getNodeState(), "/foo");
-        IndexCopier copier = new RAMIndexCopier(baseDir, sameThreadExecutor(), getWorkDir());
+        IndexCopier copier = new RAMIndexCopier(baseDir, directExecutor(), getWorkDir());
 
         Directory remote = new CloseSafeDir();
         byte[] t1 = writeFile(remote, "t1");
@@ -738,7 +738,7 @@ public class IndexCopierTest {
             }
         };
         LuceneIndexDefinition defn = new LuceneIndexDefinition(root, builder.getNodeState(), "/foo");
-        IndexCopier copier = new RAMIndexCopier(baseDir, sameThreadExecutor(), getWorkDir());
+        IndexCopier copier = new RAMIndexCopier(baseDir, directExecutor(), getWorkDir());
 
         final Set<String> readRemotes = newHashSet();
         Directory remote = new RAMDirectory() {
@@ -1051,7 +1051,7 @@ public class IndexCopierTest {
     public void directoryContentMismatch_COR() throws Exception{
         Directory baseDir = new CloseSafeDir();
         LuceneIndexDefinition defn = new LuceneIndexDefinition(root, builder.getNodeState(), "/foo");
-        IndexCopier copier = new RAMIndexCopier(baseDir, sameThreadExecutor(), getWorkDir(), true);
+        IndexCopier copier = new RAMIndexCopier(baseDir, directExecutor(), getWorkDir(), true);
 
         Directory remote = new RAMDirectory();
         byte[] t1 = writeFile(remote, "t1");
@@ -1072,7 +1072,7 @@ public class IndexCopierTest {
         t1 = writeFile(remoteModified, "t1");
 
         //3. Reopen the copier
-        copier = new RAMIndexCopier(baseDir, sameThreadExecutor(), getWorkDir(), true);
+        copier = new RAMIndexCopier(baseDir, directExecutor(), getWorkDir(), true);
 
         //4. Post opening local the content should be in sync with remote
         //So t1 should be recreated matching remote

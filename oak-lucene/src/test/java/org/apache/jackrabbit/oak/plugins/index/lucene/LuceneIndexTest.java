@@ -21,7 +21,7 @@ import static com.google.common.collect.ImmutableSet.of;
 import static com.google.common.collect.Iterators.transform;
 import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Sets.newHashSet;
-import static com.google.common.util.concurrent.MoreExecutors.sameThreadExecutor;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static java.util.Arrays.asList;
 import static javax.jcr.PropertyType.TYPENAME_STRING;
 import static org.apache.jackrabbit.JcrConstants.JCR_DATA;
@@ -759,7 +759,7 @@ public class LuceneIndexTest {
         NodeState indexed = HOOK.processCommit(before, after,CommitInfo.EMPTY);
 
         File indexRootDir = new File(getIndexDir());
-        tracker = new IndexTracker(new IndexCopier(sameThreadExecutor(), indexRootDir));
+        tracker = new IndexTracker(new IndexCopier(directExecutor(), indexRootDir));
         tracker.update(indexed);
 
         assertQuery(tracker, indexed, "foo", "bar");
@@ -785,7 +785,7 @@ public class LuceneIndexTest {
 
         NodeState indexed = HOOK.processCommit(before, builder.getNodeState(),CommitInfo.EMPTY);
 
-        IndexCopier copier = new IndexCopier(sameThreadExecutor(), new File(getIndexDir()));
+        IndexCopier copier = new IndexCopier(directExecutor(), new File(getIndexDir()));
         tracker = new IndexTracker(copier);
         tracker.update(indexed);
 

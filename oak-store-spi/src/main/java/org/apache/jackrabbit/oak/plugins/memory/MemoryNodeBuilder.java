@@ -26,7 +26,7 @@ package org.apache.jackrabbit.oak.plugins.memory;
 //                                                                         //
 // WARNING! WARNING! WARNING! WARNING! WARNING! WARNING! WARNING! WARNING! //
 
-import static com.google.common.base.Objects.toStringHelper;
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static org.apache.jackrabbit.oak.plugins.memory.EmptyNodeState.EMPTY_NODE;

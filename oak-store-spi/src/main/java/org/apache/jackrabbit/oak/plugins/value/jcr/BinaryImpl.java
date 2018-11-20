@@ -16,7 +16,7 @@
  */
 package org.apache.jackrabbit.oak.plugins.value.jcr;
 
-import static com.google.common.base.Objects.toStringHelper;
+import static com.google.common.base.MoreObjects.toStringHelper;
 
 import java.io.IOException;
 import java.io.InputStream;

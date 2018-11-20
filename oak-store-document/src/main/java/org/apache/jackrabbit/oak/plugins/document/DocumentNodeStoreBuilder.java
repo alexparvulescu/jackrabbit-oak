@@ -37,6 +37,7 @@ import org.apache.jackrabbit.oak.cache.CacheLIRS;
 import org.apache.jackrabbit.oak.cache.CacheStats;
 import org.apache.jackrabbit.oak.cache.CacheValue;
 import org.apache.jackrabbit.oak.cache.EmpiricalWeigher;
+import org.apache.jackrabbit.oak.commons.guava.MoreExecutorsCompat;
 import org.apache.jackrabbit.oak.plugins.blob.BlobStoreStats;
 import org.apache.jackrabbit.oak.plugins.blob.CachingBlobStore;
 import org.apache.jackrabbit.oak.plugins.blob.ReferencedBlob;
@@ -431,7 +432,7 @@ public class DocumentNodeStoreBuilder<T extends DocumentNodeStoreBuilder<T>> {
 
     public Executor getExecutor() {
         if(executor == null){
-            return MoreExecutors.sameThreadExecutor();
+            return MoreExecutorsCompat.directExecutor();
         }
         return executor;
     }

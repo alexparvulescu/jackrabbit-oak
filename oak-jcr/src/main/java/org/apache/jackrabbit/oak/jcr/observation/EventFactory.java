@@ -37,6 +37,7 @@ import org.apache.jackrabbit.api.observation.JackrabbitEvent;
 import org.apache.jackrabbit.oak.api.PropertyState;
 import org.apache.jackrabbit.oak.api.blob.BlobAccessProvider;
 import org.apache.jackrabbit.oak.commons.PathUtils;
+import org.apache.jackrabbit.oak.commons.guava.MoreObjectsCompat;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
 import org.apache.jackrabbit.oak.plugins.value.jcr.PartialValueFactory;
 import org.apache.jackrabbit.oak.spi.commit.CommitInfo;
@@ -325,7 +326,7 @@ public class EventFactory {
 
         @Override
         public String toString() {
-            return Objects.toStringHelper("Event")
+            return MoreObjectsCompat.toStringHelper("Event")
                     .add("type", getType())
                     .add("path", getPath())
                     .add("identifier", getIdentifier())

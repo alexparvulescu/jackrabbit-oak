@@ -49,7 +49,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import static com.google.common.collect.ImmutableMap.of;
-import static com.google.common.util.concurrent.MoreExecutors.sameThreadExecutor;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static java.util.Collections.singletonList;
 import static org.apache.jackrabbit.oak.InitialContentHelper.INITIAL_CONTENT;
 import static org.apache.jackrabbit.oak.plugins.index.lucene.FieldFactory.newPathField;
@@ -67,7 +67,7 @@ public class ReaderRefCountIT {
 
     @Before
     public void setUp() throws IOException {
-        indexCopier = new IndexCopier(sameThreadExecutor(), temporaryFolder.getRoot());
+        indexCopier = new IndexCopier(directExecutor(), temporaryFolder.getRoot());
     }
 
     @Test
@@ -132,7 +132,7 @@ public class ReaderRefCountIT {
             }
         };
 
-        DocumentQueue queue = new DocumentQueue(100, tracker, sameThreadExecutor());
+        DocumentQueue queue = new DocumentQueue(100, tracker, directExecutor());
         queue.setExceptionHandler(uh);
 
 

@@ -69,7 +69,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import static com.google.common.util.concurrent.MoreExecutors.sameThreadExecutor;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static org.apache.jackrabbit.oak.spi.mount.Mounts.defaultMountInfoProvider;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.assertNotNull;
@@ -101,7 +101,7 @@ public class HybridIndexClusterIT extends AbstractClusterTest {
         LuceneIndexReaderFactory indexReaderFactory = new DefaultIndexReaderFactory(mip, copier);
         IndexTracker tracker = new IndexTracker(indexReaderFactory,nrtIndexFactory);
         LuceneIndexProvider provider = new LuceneIndexProvider(tracker);
-        DocumentQueue queue = new DocumentQueue(100, tracker, sameThreadExecutor());
+        DocumentQueue queue = new DocumentQueue(100, tracker, directExecutor());
         LuceneIndexEditorProvider editorProvider = new LuceneIndexEditorProvider(copier,
                 tracker,
                 null,
