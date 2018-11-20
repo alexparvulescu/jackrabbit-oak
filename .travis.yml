@@ -42,6 +42,8 @@ install:
   - mvn --batch-mode -DskipTests -Dbaseline.skip=true install -pl :${MODULE} -am -nsu
 script:   mvn --batch-mode clean verify -DtrimStackTrace=false -Dbaseline.skip=true ${UT} ${PROFILE} -Dnsfixtures=DOCUMENT_NS -pl :${MODULE} -nsu
 language: java
+os:
+  - windows
 jdk:
   - openjdk10
   - openjdk11
