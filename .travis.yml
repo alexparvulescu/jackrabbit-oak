@@ -44,7 +44,8 @@ install:
 script:   mvn --batch-mode clean verify -DtrimStackTrace=false -Dbaseline.skip=true ${UT} ${PROFILE} -Dnsfixtures=DOCUMENT_NS -pl :${MODULE} -nsu
 language: java
 jdk:
-  - oraclejdk8
+  - openjdk12
+  - openjdk-ea
 cache:
   directories:
     - $HOME/.m2
