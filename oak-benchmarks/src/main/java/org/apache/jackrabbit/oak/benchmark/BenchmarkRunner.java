@@ -494,7 +494,8 @@ public class BenchmarkRunner {
             new PersistentCacheTest(statsProvider),
             new StringWriteTest(),
             new BasicWriteTest(),
-            new CanReadNonExisting()
+            new CanReadNonExisting(),
+            new UserLookupTest(runAsAdmin.value(options))
         };
 
         Set<String> argset = Sets.newHashSet(nonOption.values(options));
