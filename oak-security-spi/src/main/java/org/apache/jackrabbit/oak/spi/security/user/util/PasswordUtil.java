@@ -236,6 +236,19 @@ public final class PasswordUtil {
         return passwordHash.toString();
     }
 
+    public static void main(String[] args) throws Exception {
+
+        // rep:token.key
+        String hashedPassword = "{SHA-256}1174c4adca73c82d-bfd40e0c2ed585947cb9a461ca7cdb278e12c82b147e3df8176deca24fd9827a";
+
+        // cookie: ea729278-45e9-4bbf-bde1-7d2f89f62af4:d459673f-e151-420b-8bb7-6b3240bf5cdc_68ca884d1013c95c4720e0991872c4f5:crx.default
+        String key = "68ca884d1013c95c4720e0991872c4f5";
+        String userid = "admin";
+
+        boolean same = isSame(hashedPassword, key + userid);
+        System.err.println(same);
+    }
+
     @NotNull
     private static String generateSalt(int saltSize) {
         SecureRandom random = new SecureRandom();
