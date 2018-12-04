@@ -12,8 +12,9 @@ environment:
 platform:
   - x64
 
-install:  
+install:
   - appveyor DownloadFile https://download.java.net/java/early_access/jdk12/22/GPL/openjdk-12-ea+22_windows-x64_bin.zip -FileName jdk.zip
+  - ps: Expand-Archive -Path jdk.zip -DestinationPath C:\Program Files\Java\jdk12
   - cmd: refreshenv
   - ps: $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
   - java -version
