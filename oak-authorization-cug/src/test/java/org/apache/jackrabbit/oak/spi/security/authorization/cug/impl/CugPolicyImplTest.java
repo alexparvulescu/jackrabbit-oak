@@ -72,7 +72,7 @@ public class CugPolicyImplTest extends AbstractSecurityTest {
     }
 
     private CugPolicyImpl createCugPolicy(int importBehavior, @NotNull Set<Principal> principals) {
-        return new CugPolicyImpl(path, NamePathMapper.DEFAULT, principalManager, importBehavior, exclude, principals);
+        return new CugPolicyImpl(path, NamePathMapper.DEFAULT, principalManager, importBehavior, exclude, principals, false);
     }
 
     private Principal getExcludedPrincipal() {
@@ -265,5 +265,25 @@ public class CugPolicyImplTest extends AbstractSecurityTest {
         Principal excluded = getExcludedPrincipal();
         CugPolicyImpl cug = createCugPolicy(ImportBehavior.ABORT, Collections.singleton(excluded));
         assertTrue(cug.removePrincipals(excluded));
+    }
+
+    @Test
+    public void testImmutable() throws Exception {
+        CugPolicy i = new CugPolicyImpl(path, NamePathMapper.DEFAULT, principalManager, ImportBehavior.ABORT, exclude,
+                principals, true);
+        try {
+            i.addPrincipals(EveryonePrincipal.getInstance());
+            fail();
+        } catch (AccessControlException e) {
+            // expected
+            assertTrue(e.getMessage().equals(CugPolicyImpl.IMMUTABLE_ERR));
+        }
+        try {
+            i.removePrincipals(EveryonePrincipal.getInstance());
+            fail();
+        } catch (AccessControlException e) {
+            // expected
+            assertTrue(e.getMessage().equals(CugPolicyImpl.IMMUTABLE_ERR));
+        }
     }
 }
