@@ -20,6 +20,8 @@ install:
   - cmd: SET M2_HOME=C:\maven\apache-maven-3.6.0
   - cmd: SET JAVA_HOME=C:\jdk12\jdk-12
   - cmd: SET PATH=%JAVA_HOME%\bin;%M2_HOME%\bin;%PATH%
+  - cmd: setx -m JAVA_HOME "C:\jdk12\jdk-12"
+  - cmd: setx -m PATH "%JAVA_HOME%\bin;%M2_HOME%\bin;%PATH%";
   - cmd: refreshenv
   - java -version
   - mvn -version
