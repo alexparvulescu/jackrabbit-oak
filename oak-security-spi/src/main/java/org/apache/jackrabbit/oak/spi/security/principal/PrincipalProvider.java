@@ -164,34 +164,4 @@ public interface PrincipalProvider {
      */
     @NotNull
     Iterator<? extends Principal> findPrincipals(int searchType);
-
-    /**
-     * Find all principals that match the search type.
-     *
-     * @param searchType Limit the search to certain types of principals. Valid
-     * values are any of
-     * <ul><li>{@link org.apache.jackrabbit.api.security.principal.PrincipalManager#SEARCH_TYPE_ALL}</li></ul>
-     * <ul><li>{@link org.apache.jackrabbit.api.security.principal.PrincipalManager#SEARCH_TYPE_NOT_GROUP}</li></ul>
-     * <ul><li>{@link org.apache.jackrabbit.api.security.principal.PrincipalManager#SEARCH_TYPE_GROUP}</li></ul>
-     * @param offset Offset from where to start returning results. {@code 0} for no offset.
-     * @param limit Maximal number of results to return. {@code -1} for no limit.
-     * @return An iterator of principals.
-     * @throws IllegalArgumentException if {@code offset} is negative
-     */
-    @NotNull
-    default Iterator<? extends Principal> findPrincipals(int searchType, long offset, long limit) {
-        if (offset < 0) {
-            throw new IllegalArgumentException(Long.toString(offset));
-        }
-        Iterator<? extends Principal> principals = findPrincipals(searchType);
-        Spliterator<? extends Principal> spliterator = Spliterators.spliteratorUnknownSize(principals, 0);
-        Stream<? extends Principal> stream = StreamSupport.stream(spliterator, false);
-        if (offset > 0) {
-            stream = stream.skip(offset);
-        }
-        if (limit >= 0) {
-            stream = stream.limit(limit);
-        }
-        return stream.iterator();
-    }
 }

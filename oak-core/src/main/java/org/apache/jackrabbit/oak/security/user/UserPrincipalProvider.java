@@ -153,6 +153,8 @@ class UserPrincipalProvider implements PrincipalProvider {
                     .append(buildSearchPattern(nameHint))
                     .append("')]");
 
+            log.info("#findPrincipals: {}", statement.toString());
+
             Result result = root.getQueryEngine().executeQuery(
                     statement.toString(), javax.jcr.query.Query.XPATH,
                     NO_BINDINGS, namePathMapper.getSessionLocalMappings());
