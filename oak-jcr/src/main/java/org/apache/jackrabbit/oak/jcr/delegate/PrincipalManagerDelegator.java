@@ -26,6 +26,7 @@ import javax.jcr.RepositoryException;
 import org.apache.jackrabbit.api.security.principal.PrincipalIterator;
 import org.apache.jackrabbit.api.security.principal.PrincipalManager;
 import org.apache.jackrabbit.oak.jcr.session.operation.SessionOperation;
+import org.apache.jackrabbit.oak.spi.security.principal.OakPrincipalManager;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -34,7 +35,7 @@ import org.jetbrains.annotations.NotNull;
  *
  * @see SessionDelegate#perform(SessionOperation)
  */
-public class PrincipalManagerDelegator implements PrincipalManager {
+public class PrincipalManagerDelegator implements OakPrincipalManager {
     private final SessionDelegate delegate;
     private final PrincipalManager principalManager;
 
@@ -120,6 +121,24 @@ public class PrincipalManagerDelegator implements PrincipalManager {
             @Override
             public Principal perform() {
                 return principalManager.getEveryone();
+            }
+        });
+    }
+
+    @Override
+    public PrincipalIterator findPrincipals(String simpleFilter, int searchType, long offset, long limit) {
+        return delegate.safePerform(new SessionOperation<PrincipalIterator>("findPrincipals") {
+            @NotNull
+            @Override
+            public PrincipalIterator perform() {
+                if (principalManager instanceof OakPrincipalManager) {
+                    return ((OakPrincipalManager) principalManager).findPrincipals(simpleFilter, searchType, offset,
+                            limit);
+                } else {
+                    PrincipalIterator pi = principalManager.findPrincipals(simpleFilter, searchType);
+                    pi.skip(offset);
+                    return pi;
+                }
             }
         });
     }

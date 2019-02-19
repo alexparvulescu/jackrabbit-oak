@@ -90,8 +90,6 @@ public class UserQueryManager {
         }
 
         String statement = buildXPathStatement(builder);
-        log.info("#findAuthorizables {}", statement);
-
         final String groupId = builder.getGroupID();
         if (groupId == null || isEveryone(groupId)) {
             long offset = builder.getOffset();

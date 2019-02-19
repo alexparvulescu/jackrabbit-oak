@@ -170,8 +170,6 @@ class PrincipalProviderImpl implements PrincipalProvider {
                 builder.setSelector(AuthorizableType.getType(searchType).getAuthorizableClass());
             }
         };
-        log.info("#findAuthorizables delegates to UserManager");
-
         return userManager.findAuthorizables(userQuery);
     }
 
