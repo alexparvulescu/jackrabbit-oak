@@ -16,10 +16,12 @@
  */
 package org.apache.jackrabbit.oak.security.authorization.evaluation;
 
+import java.util.Arrays;
 import java.util.Set;
 import javax.jcr.AccessDeniedException;
 import javax.jcr.PathNotFoundException;
 import javax.jcr.security.AccessControlManager;
+import javax.jcr.security.AccessControlPolicy;
 import javax.jcr.security.Privilege;
 
 import com.google.common.collect.ImmutableSet;
@@ -123,5 +125,44 @@ public class RepoLevelPolicyTest extends AbstractOakCoreTest implements Privileg
 
         AccessControlManager testAcMgr = getAccessControlManager(getTestRoot());
         assertEquals(expected, ImmutableSet.copyOf(testAcMgr.getPrivileges(null)));
+    }
+
+
+    
+    @Test(expected = PathNotFoundException.class)
+    public void testGetEffectivePoliciesRootNotReadable() throws Exception {
+        setupPermission(null, getTestUser().getPrincipal(), true, JCR_READ_ACCESS_CONTROL);
+
+        getAccessControlManager(getTestRoot()).getEffectivePolicies((String) null);
+    }
+
+    @Test(expected = PathNotFoundException.class)
+    public void testGetEffectivePoliciesRootNotReadable2() throws Exception {
+        setupPermission(null, getTestUser().getPrincipal(), true, JCR_READ, JCR_READ_ACCESS_CONTROL);
+
+        getAccessControlManager(getTestRoot()).getEffectivePolicies((String) null);
+    }
+
+    @Test(expected = AccessDeniedException.class)
+    public void testGetEffectivePoliciesMissingAcPermission() throws Exception {
+        setupPermission(PathUtils.ROOT_PATH, getTestUser().getPrincipal(), true, JCR_READ);
+
+        getAccessControlManager(getTestRoot()).getEffectivePolicies((String) null);
+    }
+
+    @Test(expected = AccessDeniedException.class)
+    public void testGetEffectivePoliciesMissingAcPermission2() throws Exception {
+        setupPermission(PathUtils.ROOT_PATH, getTestUser().getPrincipal(), true, JCR_READ, JCR_READ_ACCESS_CONTROL);
+
+        getAccessControlManager(getTestRoot()).getEffectivePolicies((String) null);
+    }
+
+    @Test
+    public void testGetEffectivePolicies() throws Exception {
+        setupPermission(PathUtils.ROOT_PATH, getTestUser().getPrincipal(), true, JCR_READ);
+        setupPermission(null, getTestUser().getPrincipal(), true, JCR_READ_ACCESS_CONTROL);
+
+        AccessControlPolicy[] eff = getAccessControlManager(getTestRoot()).getEffectivePolicies((String) null);
+        assertEquals(1, eff.length);
     }
 }

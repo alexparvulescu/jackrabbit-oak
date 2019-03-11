@@ -33,6 +33,7 @@ import org.apache.jackrabbit.oak.api.ContentSession;
 import org.apache.jackrabbit.oak.api.Root;
 import org.apache.jackrabbit.oak.api.Tree;
 import org.apache.jackrabbit.oak.api.Type;
+import org.apache.jackrabbit.oak.commons.PathUtils;
 import org.apache.jackrabbit.oak.namepath.NameMapper;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
 import org.apache.jackrabbit.oak.namepath.impl.GlobalNameMapper;
@@ -2608,5 +2609,39 @@ public class AccessControlManagerImplTest extends AbstractSecurityTest implement
         public RestrictionProvider getRestrictionProvider() {
             return restrictionProvider;
         }
+    }
+
+    @Test
+    public void testTestSessionGetEffectivePoliciesRepositoryLevel() throws Exception {
+        setupPolicy(PathUtils.ROOT_PATH,
+                privilegesFromNames(PrivilegeConstants.JCR_READ, PrivilegeConstants.JCR_READ_ACCESS_CONTROL));
+        setupPolicy(null, privilegesFromNames(PrivilegeConstants.JCR_NAMESPACE_MANAGEMENT,
+                PrivilegeConstants.JCR_READ_ACCESS_CONTROL));
+        root.commit();
+
+        Root testRoot = getTestRoot();
+        testRoot.refresh();
+
+        AccessControlPolicy[] eff0 = acMgr.getEffectivePolicies((String) null);
+        assertPolicies(eff0, 1);
+        ImmutableACL acl0 = (ImmutableACL) eff0[0];
+        assertEquals(1, acl0.getEntries().size());
+        ACE e0 = (ACE) acl0.getEntries().get(0);
+        assertEquals(testPrincipal, e0.getPrincipal());
+
+        AccessControlPolicy[] eff1 = acMgr.getEffectivePolicies(Collections.singleton(testPrincipal));
+        assertPolicies(eff1, 2);
+
+        AccessControlManagerImpl testAcMgr = getTestAccessControlManager();
+        assertTrue(testAcMgr.hasPrivileges(null, privilegesFromNames(PrivilegeConstants.JCR_NAMESPACE_MANAGEMENT,
+                PrivilegeConstants.JCR_READ_ACCESS_CONTROL)));
+
+        AccessControlPolicy[] eff2 = testAcMgr.getEffectivePolicies(Collections.singleton(testPrincipal));
+        // TODO should be 2, but is zero
+        assertPolicies(eff2, 0);
+
+        // TODO javax.jcr.PathNotFoundException: No tree at null
+        AccessControlPolicy[] eff3 = testAcMgr.getEffectivePolicies((String) null);
+        assertPolicies(eff3, 1);
     }
 }
