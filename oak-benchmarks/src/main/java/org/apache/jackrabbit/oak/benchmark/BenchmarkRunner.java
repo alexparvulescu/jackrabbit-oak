@@ -501,7 +501,7 @@ public class BenchmarkRunner {
             new StringWriteTest(),
             new BasicWriteTest(),
             new CanReadNonExisting(),
-            new IsNodeTypeTest()
+            new IsNodeTypeTest(runAsAdmin.value(options))
         };
 
         Set<String> argset = Sets.newHashSet(nonOption.values(options));
