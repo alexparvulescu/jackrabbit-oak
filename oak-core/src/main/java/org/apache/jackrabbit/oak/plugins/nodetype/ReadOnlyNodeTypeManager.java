@@ -25,6 +25,7 @@ import static org.apache.jackrabbit.oak.commons.PathUtils.dropIndexFromName;
 import static org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants.NODE_TYPES_PATH;
 import static org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants.REP_SUPERTYPES;
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -50,13 +51,18 @@ import org.apache.jackrabbit.oak.api.PropertyState;
 import org.apache.jackrabbit.oak.api.Root;
 import org.apache.jackrabbit.oak.api.Tree;
 import org.apache.jackrabbit.oak.api.Type;
+import org.apache.jackrabbit.oak.commons.LazyValue;
 import org.apache.jackrabbit.oak.namepath.NameMapper;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
 import org.apache.jackrabbit.oak.namepath.impl.NamePathMapperImpl;
+import org.apache.jackrabbit.oak.plugins.memory.PropertyStates;
+import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
 import org.apache.jackrabbit.oak.spi.nodetype.DefinitionProvider;
 import org.apache.jackrabbit.oak.spi.nodetype.EffectiveNodeType;
 import org.apache.jackrabbit.oak.spi.nodetype.EffectiveNodeTypeProvider;
 import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants;
+import org.apache.jackrabbit.oak.spi.security.authorization.permission.PermissionProvider;
+import org.apache.jackrabbit.oak.spi.security.authorization.permission.Permissions;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -67,6 +73,12 @@ import org.jetbrains.annotations.Nullable;
  * {@link UnsupportedRepositoryOperationException}.
  */
 public abstract class ReadOnlyNodeTypeManager implements NodeTypeManager, EffectiveNodeTypeProvider, DefinitionProvider {
+
+    /**
+     * Use an zero length MVP to check read permission on jcr:mixinTypes (OAK-7652)
+     */
+    private static final PropertyState EMPTY_MIXIN_TYPES = PropertyStates.createProperty(
+            JcrConstants.JCR_MIXINTYPES, Collections.emptyList(), Type.NAMES);
 
     /**
      * Returns the internal name for the specified JCR name.
@@ -254,34 +266,63 @@ public abstract class ReadOnlyNodeTypeManager implements NodeTypeManager, Effect
         // shortcuts for common cases
         if (JcrConstants.NT_BASE.equals(oakNtName)) {
             return true;
-        } else if (JcrConstants.MIX_REFERENCEABLE.equals(oakNtName)
-                && !tree.hasProperty(JcrConstants.JCR_UUID)) {
-            return false;
-        } else if (JcrConstants.MIX_VERSIONABLE.equals(oakNtName)
-                && !tree.hasProperty(JcrConstants.JCR_ISCHECKEDOUT)) {
-            return false;
         }
 
         Tree types = getTypes();
+        String primary = getPrimaryTypeName(tree);
+        if (primary != null && isa(types, primary, oakNtName)) {
+            return true;
+        }
 
-        PropertyState primary = tree.getProperty(JcrConstants.JCR_PRIMARYTYPE);
-        if (primary != null && primary.getType() == Type.NAME) {
-            String name = primary.getValue(Type.NAME);
+        for (String name : getMixinTypeNames(tree)) {
             if (isa(types, name, oakNtName)) {
                 return true;
             }
         }
 
-        PropertyState mixins = tree.getProperty(JcrConstants.JCR_MIXINTYPES);
-        if (mixins != null && mixins.getType() == Type.NAMES) {
-            for (String name : mixins.getValue(Type.NAMES)) {
-                if (isa(types, name, oakNtName)) {
-                    return true;
-                }
+        return false;
+    }
+
+    @Nullable
+    public String getPrimaryTypeName(@NotNull Tree tree) {
+        LazyValue<Tree> fallback = getReadOnlyTree(tree);
+        if (fallback == null) {
+            return TreeUtil.getPrimaryTypeName(tree);
+        } else {
+            return TreeUtil.getPrimaryTypeName(tree, fallback);
+        }
+    }
+
+    @NotNull
+    public Iterable<String> getMixinTypeNames(@NotNull Tree tree) {
+        if (tree.hasProperty(JcrConstants.JCR_MIXINTYPES) || canReadMixinTypes(tree)) {
+            return TreeUtil.getMixinTypeNames(tree);
+        } else {
+            LazyValue<Tree> fallback = getReadOnlyTree(tree);
+            if (fallback == null) {
+                return TreeUtil.getMixinTypeNames(tree);
+            } else {
+                return TreeUtil.getMixinTypeNames(tree, fallback);
             }
         }
+    }
 
-        return false;
+    @Nullable
+    protected LazyValue<Tree> getReadOnlyTree(@NotNull Tree tree) {
+        return null;
+    }
+
+    @Nullable
+    protected PermissionProvider getPermissionProvider() {
+        return null;
+    }
+
+    private boolean canReadMixinTypes(@NotNull Tree tree) {
+        PermissionProvider permissionProvider = getPermissionProvider();
+        if (permissionProvider == null) {
+            return true;
+        }
+        return permissionProvider.isGranted(tree, EMPTY_MIXIN_TYPES, Permissions.READ_PROPERTY);
     }
 
     @Override
@@ -302,7 +343,7 @@ public abstract class ReadOnlyNodeTypeManager implements NodeTypeManager, Effect
         return false;
     }
 
-    private static boolean isa(Tree types, String typeName, String superName) {
+    private static boolean isa(@NotNull Tree types, @NotNull String typeName, @NotNull String superName) {
         if (typeName.equals(superName)) {
             return true;
         }

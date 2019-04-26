@@ -59,7 +59,6 @@ import javax.jcr.lock.LockManager;
 import javax.jcr.nodetype.ConstraintViolationException;
 import javax.jcr.nodetype.NodeDefinition;
 import javax.jcr.nodetype.NodeType;
-import javax.jcr.nodetype.NodeTypeManager;
 import javax.jcr.version.OnParentVersionAction;
 import javax.jcr.version.Version;
 import javax.jcr.version.VersionException;
@@ -79,7 +78,6 @@ import org.apache.jackrabbit.oak.api.PropertyState;
 import org.apache.jackrabbit.oak.api.Tree;
 import org.apache.jackrabbit.oak.api.Tree.Status;
 import org.apache.jackrabbit.oak.api.Type;
-import org.apache.jackrabbit.oak.commons.LazyValue;
 import org.apache.jackrabbit.oak.commons.PathUtils;
 import org.apache.jackrabbit.oak.jcr.delegate.NodeDelegate;
 import org.apache.jackrabbit.oak.jcr.delegate.PropertyDelegate;
@@ -91,8 +89,8 @@ import org.apache.jackrabbit.oak.jcr.version.VersionHistoryImpl;
 import org.apache.jackrabbit.oak.jcr.version.VersionImpl;
 import org.apache.jackrabbit.oak.plugins.identifier.IdentifierManager;
 import org.apache.jackrabbit.oak.plugins.memory.PropertyStates;
+import org.apache.jackrabbit.oak.plugins.nodetype.write.ReadWriteNodeTypeManager;
 import org.apache.jackrabbit.oak.spi.nodetype.EffectiveNodeType;
-import org.apache.jackrabbit.oak.plugins.tree.factories.RootFactory;
 import org.apache.jackrabbit.oak.spi.nodetype.NodeTypeConstants;
 import org.apache.jackrabbit.oak.spi.security.authorization.permission.Permissions;
 import org.apache.jackrabbit.oak.plugins.tree.TreeUtil;
@@ -108,13 +106,6 @@ import org.slf4j.LoggerFactory;
  * @param <T> the delegate type
  */
 public class NodeImpl<T extends NodeDelegate> extends ItemImpl<T> implements Node, JackrabbitNode {
-
-    /**
-     * Use an zero length MVP to check read permission on jcr:mixinTypes (OAK-7652)
-     */
-    private static final PropertyState EMPTY_MIXIN_TYPES = PropertyStates.createProperty(
-            JcrConstants.JCR_MIXINTYPES, Collections.emptyList(), Type.NAMES);
-
 
     /**
      * The maximum returned value for {@link NodeIterator#getSize()}. If there
@@ -325,7 +316,9 @@ public class NodeImpl<T extends NodeDelegate> extends ItemImpl<T> implements Nod
         sessionDelegate.performVoid(new ItemWriteOperation<Void>("orderBefore") {
             @Override
             public void performVoid() throws RepositoryException {
-                getEffectiveNodeType().checkOrderableChildNodes();
+                EffectiveNodeType ent = getNodeTypeManager().getEffectiveNodeType(dlg.getTree());
+                ent.checkOrderableChildNodes();
+
                 String oakSrcChildRelPath = getOakPathOrThrowNotFound(srcChildRelPath);
                 String oakDestChildRelPath = null;
                 if (destChildRelPath != null) {
@@ -893,7 +886,7 @@ public class NodeImpl<T extends NodeDelegate> extends ItemImpl<T> implements Nod
             @Override
             public NodeType perform() throws RepositoryException {
                 Tree tree = node.getTree();
-                String primaryTypeName = getPrimaryTypeName(tree);
+                String primaryTypeName = getNodeTypeManager().getPrimaryTypeName(tree);
                 if (primaryTypeName != null) {
                     return getNodeTypeManager().getNodeType(sessionContext.getJcrName(primaryTypeName));
                 } else {
@@ -915,9 +908,9 @@ public class NodeImpl<T extends NodeDelegate> extends ItemImpl<T> implements Nod
             public NodeType[] perform() throws RepositoryException {
                 Tree tree = node.getTree();
 
-                Iterator<String> mixinNames = getMixinTypeNames(tree);
+                ReadWriteNodeTypeManager ntMgr = getNodeTypeManager();
+                Iterator<String> mixinNames = ntMgr.getMixinTypeNames(tree).iterator();
                 if (mixinNames.hasNext()) {
-                    NodeTypeManager ntMgr = getNodeTypeManager();
                     List<NodeType> mixinTypes = Lists.newArrayList();
                     while (mixinNames.hasNext()) {
                         mixinTypes.add(ntMgr.getNodeType(sessionContext.getJcrName(mixinNames.next())));
@@ -938,7 +931,7 @@ public class NodeImpl<T extends NodeDelegate> extends ItemImpl<T> implements Nod
             @Override
             public Boolean perform() throws RepositoryException {
                 Tree tree = node.getTree();
-                return getNodeTypeManager().isNodeType(getPrimaryTypeName(tree), getMixinTypeNames(tree), oakName);
+                return getNodeTypeManager().isNodeType(tree, oakName);
             }
         });
     }
@@ -1288,38 +1281,6 @@ public class NodeImpl<T extends NodeDelegate> extends ItemImpl<T> implements Nod
     }
 
     //------------------------------------------------------------< internal >---
-    @Nullable
-    private String getPrimaryTypeName(@NotNull Tree tree) {
-        return TreeUtil.getPrimaryTypeName(tree, getReadOnlyTree(tree));
-    }
-
-    @NotNull
-    private Iterator<String> getMixinTypeNames(@NotNull Tree tree) throws RepositoryException {
-        if (tree.hasProperty(JcrConstants.JCR_MIXINTYPES) || canReadMixinTypes(tree)) {
-            return TreeUtil.getMixinTypeNames(tree).iterator();
-        } else {
-            return TreeUtil.getMixinTypeNames(tree, getReadOnlyTree(tree)).iterator();
-        }
-    }
-
-    @NotNull
-    private LazyValue<Tree> getReadOnlyTree(@NotNull Tree tree) {
-        return new LazyValue<Tree>() {
-            @Override
-            protected Tree createValue() {
-                return RootFactory.createReadOnlyRoot(sessionDelegate.getRoot()).getTree(tree.getPath());
-            }
-        };
-    }
-
-    private boolean canReadMixinTypes(@NotNull Tree tree) throws RepositoryException {
-        return sessionContext.getAccessManager().hasPermissions(
-                tree, EMPTY_MIXIN_TYPES, Permissions.READ_PROPERTY);
-    }
-
-    private EffectiveNodeType getEffectiveNodeType() throws RepositoryException {
-        return getNodeTypeManager().getEffectiveNodeType(dlg.getTree());
-    }
 
     private Iterator<Node> nodeIterator(Iterator<NodeDelegate> childNodes) {
         return sessionDelegate.sync(transform(

@@ -41,6 +41,7 @@ import org.apache.jackrabbit.commons.xml.ParsingContentHandler;
 import org.apache.jackrabbit.oak.api.CommitFailedException;
 import org.apache.jackrabbit.oak.api.Root;
 import org.apache.jackrabbit.oak.api.Tree;
+import org.apache.jackrabbit.oak.commons.LazyValue;
 import org.apache.jackrabbit.oak.jcr.delegate.SessionDelegate;
 import org.apache.jackrabbit.oak.jcr.delegate.WorkspaceDelegate;
 import org.apache.jackrabbit.oak.jcr.lock.LockDeprecation;
@@ -52,7 +53,10 @@ import org.apache.jackrabbit.oak.jcr.xml.ImportHandler;
 import org.apache.jackrabbit.oak.namepath.NamePathMapper;
 import org.apache.jackrabbit.oak.plugins.name.ReadWriteNamespaceRegistry;
 import org.apache.jackrabbit.oak.plugins.nodetype.write.ReadWriteNodeTypeManager;
+import org.apache.jackrabbit.oak.plugins.tree.factories.RootFactory;
+import org.apache.jackrabbit.oak.spi.security.authorization.permission.PermissionProvider;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -111,6 +115,23 @@ public class WorkspaceImpl implements JackrabbitWorkspace {
             @Override
             protected NamePathMapper getNamePathMapper() {
                 return sessionContext;
+            }
+
+            @Nullable
+            @Override
+            protected LazyValue<Tree> getReadOnlyTree(@NotNull Tree tree) {
+                return new LazyValue<Tree>() {
+                    @Override
+                    protected Tree createValue() {
+                        return RootFactory.createReadOnlyRoot(sessionDelegate.getRoot()).getTree(tree.getPath());
+                    }
+                };
+            }
+
+            @NotNull
+            @Override
+            protected PermissionProvider getPermissionProvider() {
+                return sessionDelegate.getPermissionProvider();
             }
         };
     }
