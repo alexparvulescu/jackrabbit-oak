@@ -394,6 +394,13 @@
       <optional>true</optional>
     </dependency>
 
+    <!-- Package Export Analysis -->
+    <dependency>
+        <groupId>org.apache.bcel</groupId>
+        <artifactId>bcel</artifactId>
+        <version>6.3.1</version>
+    </dependency>
+
     <!-- Test dependencies -->
     <dependency>
       <groupId>junit</groupId>

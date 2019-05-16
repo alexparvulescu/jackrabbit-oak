@@ -22,6 +22,7 @@ package org.apache.jackrabbit.oak.run;
 import com.google.common.collect.ImmutableMap;
 import org.apache.jackrabbit.oak.exporter.NodeStateExportCommand;
 import org.apache.jackrabbit.oak.index.IndexCommand;
+import org.apache.jackrabbit.oak.pkgexport.PackageExportAnalysis;
 import org.apache.jackrabbit.oak.run.commons.Command;
 import org.apache.jackrabbit.oak.run.commons.Modes;
 
@@ -64,5 +65,6 @@ public final class AvailableModes {
             .put("segment-copy", new SegmentCopyCommand())
             .put("search-nodes", new SearchNodesCommand())
             .put("recover-journal", new RecoverJournalCommand())
+            .put("package-export-analysis", new PackageExportAnalysis())
             .build());
 }
