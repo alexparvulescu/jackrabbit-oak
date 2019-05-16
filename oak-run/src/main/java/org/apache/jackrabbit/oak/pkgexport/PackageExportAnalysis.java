@@ -37,9 +37,14 @@ public class PackageExportAnalysis implements Command {
 
     private static final Logger log = LoggerFactory.getLogger(PackageExportAnalysis.class);
 
-    private static String[] whitelist = new String[] { "java", "org.apache.jackrabbit" };
+    private static String[] whitelist = new String[] { "java", "org.apache.jackrabbit", "org.osgi" };
 
     private static Set<String> OAK_PUBLIC_PACKAGES = new HashSet<String>(Arrays.asList(
+
+            // oak-api
+            "org.apache.jackrabbit.oak.api",
+            "org.apache.jackrabbit.oak.api.blob",
+            "org.apache.jackrabbit.oak.api.jmx",
 
             // oak-auth-external
             "org.apache.jackrabbit.oak.spi.security.authentication.external",
@@ -55,87 +60,119 @@ public class PackageExportAnalysis implements Command {
             "org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage",
 
             // oak-blob-cloud
-            "org.apache.jackrabbit.oak.blob.cloud.s3.stats", "org.apache.jackrabbit.oak.blob.cloud.aws.s3",
+            "org.apache.jackrabbit.oak.blob.cloud.s3.stats",
+            "org.apache.jackrabbit.oak.blob.cloud.aws.s3",
 
             // oak-blob-plugins
-            "org.apache.jackrabbit.oak.plugins.blob", "org.apache.jackrabbit.oak.plugins.blob.datastore",
+            "org.apache.jackrabbit.oak.plugins.blob",
+            "org.apache.jackrabbit.oak.plugins.blob.datastore",
             "org.apache.jackrabbit.oak.plugins.blob.datastore.directaccess",
 
             // oak-blob
-            "org.apache.jackrabbit.oak.spi.blob", "org.apache.jackrabbit.oak.spi.blob.split",
+            "org.apache.jackrabbit.oak.spi.blob",
+            "org.apache.jackrabbit.oak.spi.blob.split",
             "org.apache.jackrabbit.oak.spi.blob.stats",
 
             // oak-commons
-            "org.apache.jackrabbit.oak.commons", "org.apache.jackrabbit.oak.commons.cache",
-            "org.apache.jackrabbit.oak.commons.concurrent", "org.apache.jackrabbit.oak.commons.io",
-            "org.apache.jackrabbit.oak.commons.json", "org.apache.jackrabbit.oak.commons.sort",
+            "org.apache.jackrabbit.oak.commons",
+            "org.apache.jackrabbit.oak.commons.cache",
+            "org.apache.jackrabbit.oak.commons.concurrent",
+            "org.apache.jackrabbit.oak.commons.io",
+            "org.apache.jackrabbit.oak.commons.json",
+            "org.apache.jackrabbit.oak.commons.sort",
 
             // oak-core-spi
-            "org.apache.jackrabbit.oak.cache", "org.apache.jackrabbit.oak.commons.jmx",
-            "org.apache.jackrabbit.oak.namepath", "org.apache.jackrabbit.oak.osgi",
-            "org.apache.jackrabbit.oak.spi.descriptors", "org.apache.jackrabbit.oak.spi.gc",
-            "org.apache.jackrabbit.oak.spi.lock", "org.apache.jackrabbit.oak.spi.mount",
-            "org.apache.jackrabbit.oak.spi.namespace", "org.apache.jackrabbit.oak.spi.nodetype",
-            "org.apache.jackrabbit.oak.spi.observation", "org.apache.jackrabbit.oak.spi.version",
-            "org.apache.jackrabbit.oak.spi.whiteboard", "org.apache.jackrabbit.oak.stats",
+            "org.apache.jackrabbit.oak.cache",
+            "org.apache.jackrabbit.oak.commons.jmx",
+            "org.apache.jackrabbit.oak.namepath",
+            "org.apache.jackrabbit.oak.osgi",
+            "org.apache.jackrabbit.oak.spi.descriptors",
+            "org.apache.jackrabbit.oak.spi.gc",
+            "org.apache.jackrabbit.oak.spi.lock",
+            "org.apache.jackrabbit.oak.spi.mount",
+            "org.apache.jackrabbit.oak.spi.namespace",
+            "org.apache.jackrabbit.oak.spi.nodetype",
+            "org.apache.jackrabbit.oak.spi.observation",
+            "org.apache.jackrabbit.oak.spi.version",
+            "org.apache.jackrabbit.oak.spi.whiteboard",
+            "org.apache.jackrabbit.oak.stats",
 
             // oak-core
-            "org.apache.jackrabbit.oak", "org.apache.jackrabbit.oak.namepath.impl",
-            "org.apache.jackrabbit.oak.plugins.commit", "org.apache.jackrabbit.oak.plugins.identifier",
-            "org.apache.jackrabbit.oak.plugins.index", "org.apache.jackrabbit.oak.plugins.index.aggregate",
-            "org.apache.jackrabbit.oak.plugins.index.fulltext", "org.apache.jackrabbit.oak.plugins.index.importer",
+            "org.apache.jackrabbit.oak",
+            "org.apache.jackrabbit.oak.namepath.impl",
+            "org.apache.jackrabbit.oak.plugins.commit",
+            "org.apache.jackrabbit.oak.plugins.identifier",
+            "org.apache.jackrabbit.oak.plugins.index",
+            "org.apache.jackrabbit.oak.plugins.index.aggregate",
+            "org.apache.jackrabbit.oak.plugins.index.fulltext",
+            "org.apache.jackrabbit.oak.plugins.index.importer",
             "org.apache.jackrabbit.oak.plugins.index.property",
             "org.apache.jackrabbit.oak.plugins.index.property.strategy",
-            "org.apache.jackrabbit.oak.plugins.index.reference", "org.apache.jackrabbit.oak.plugins.lock",
-            "org.apache.jackrabbit.oak.plugins.migration", "org.apache.jackrabbit.oak.plugins.migration.report",
-            "org.apache.jackrabbit.oak.plugins.name", "org.apache.jackrabbit.oak.plugins.nodetype",
-            "org.apache.jackrabbit.oak.plugins.nodetype.write", "org.apache.jackrabbit.oak.plugins.observation",
-            "org.apache.jackrabbit.oak.plugins.observation.filter", "org.apache.jackrabbit.oak.plugins.tree.factories",
+            "org.apache.jackrabbit.oak.plugins.index.reference",
+            "org.apache.jackrabbit.oak.plugins.lock",
+            "org.apache.jackrabbit.oak.plugins.migration",
+            "org.apache.jackrabbit.oak.plugins.migration.report",
+            "org.apache.jackrabbit.oak.plugins.name",
+            "org.apache.jackrabbit.oak.plugins.nodetype",
+            "org.apache.jackrabbit.oak.plugins.nodetype.write",
+            "org.apache.jackrabbit.oak.plugins.observation",
+            "org.apache.jackrabbit.oak.plugins.observation.filter",
+            "org.apache.jackrabbit.oak.plugins.tree.factories",
             "org.apache.jackrabbit.oak.plugins.version",
 
             // oak-jcr
-            "org.apache.jackrabbit.oak.jcr", "org.apache.jackrabbit.oak.jcr.observation.filter",
+            "org.apache.jackrabbit.oak.jcr",
+            "org.apache.jackrabbit.oak.jcr.observation.filter",
 
             // oak-lucene
-            "org.apache.jackrabbit.oak.plugins.index.lucene", "org.apache.jackrabbit.oak.plugins.index.lucene.score",
-            "org.apache.jackrabbit.oak.plugins.index.lucene.spi", "org.apache.jackrabbit.oak.plugins.index.lucene.util",
+            "org.apache.jackrabbit.oak.plugins.index.lucene",
+            "org.apache.jackrabbit.oak.plugins.index.lucene.score",
+            "org.apache.jackrabbit.oak.plugins.index.lucene.spi",
+            "org.apache.jackrabbit.oak.plugins.index.lucene.util",
 
             // oak-query-spi
-            "org.apache.jackrabbit.oak.query.facet", "org.apache.jackrabbit.oak.spi.query",
+            "org.apache.jackrabbit.oak.query.facet",
+            "org.apache.jackrabbit.oak.spi.query",
             "org.apache.jackrabbit.oak.spi.query.fulltext",
 
             // oak-security-spi
             "org.apache.jackrabbit.oak.plugins.tree",
-            "oak-security-spi.src.main.java.org.apache.jackrabbit.oak.spi.security",
-            "oak-security-spi.src.main.java.org.apache.jackrabbit.oak.spi.security.authentication",
-            "oak-security-spi.src.main.java.org.apache.jackrabbit.oak.spi.security.authentication.callback",
-            "oak-security-spi.src.main.java.org.apache.jackrabbit.oak.spi.security.authentication.credentials",
-            "oak-security-spi.src.main.java.org.apache.jackrabbit.oak.spi.security.authentication.token",
-            "oak-security-spi.src.main.java.org.apache.jackrabbit.oak.spi.security.authorization",
-            "oak-security-spi.src.main.java.org.apache.jackrabbit.oak.spi.security.authorization.accesscontrol",
-            "oak-security-spi.src.main.java.org.apache.jackrabbit.oak.spi.security.authorization.permission",
-            "oak-security-spi.src.main.java.org.apache.jackrabbit.oak.spi.security.authorization.restriction",
-            "oak-security-spi.src.main.java.org.apache.jackrabbit.oak.spi.security.principal",
-            "oak-security-spi.src.main.java.org.apache.jackrabbit.oak.spi.security.privilege",
-            "oak-security-spi.src.main.java.org.apache.jackrabbit.oak.spi.security.user",
-            "oak-security-spi.src.main.java.org.apache.jackrabbit.oak.spi.security.user.action",
-            "oak-security-spi.src.main.java.org.apache.jackrabbit.oak.spi.security.user.util",
-            "oak-security-spi.src.main.java.org.apache.jackrabbit.oak.spi.xml",
+            "org.apache.jackrabbit.oak.spi.security",
+            "org.apache.jackrabbit.oak.spi.security.authentication",
+            "org.apache.jackrabbit.oak.spi.security.authentication.callback",
+            "org.apache.jackrabbit.oak.spi.security.authentication.credentials",
+            "org.apache.jackrabbit.oak.spi.security.authentication.token",
+            "org.apache.jackrabbit.oak.spi.security.authorization",
+            "org.apache.jackrabbit.oak.spi.security.authorization.accesscontrol",
+            "org.apache.jackrabbit.oak.spi.security.authorization.permission",
+            "org.apache.jackrabbit.oak.spi.security.authorization.restriction",
+            "org.apache.jackrabbit.oak.spi.security.principal",
+            "org.apache.jackrabbit.oak.spi.security.privilege",
+            "org.apache.jackrabbit.oak.spi.security.user",
+            "org.apache.jackrabbit.oak.spi.security.user.action",
+            "org.apache.jackrabbit.oak.spi.security.user.util",
+            "org.apache.jackrabbit.oak.spi.xml",
 
             // oak-segment-tar
-            "org.apache.jackrabbit.oak.segment.spi.monitor", "org.apache.jackrabbit.oak.segment.spi.persistence",
+            "org.apache.jackrabbit.oak.segment.spi.monitor",
+            "org.apache.jackrabbit.oak.segment.spi.persistence",
 
             // oak-store-composite
-            "org.apache.jackrabbit.oak.composite", "org.apache.jackrabbit.oak.composite.checks",
+            "org.apache.jackrabbit.oak.composite",
+            "org.apache.jackrabbit.oak.composite.checks",
 
             // oak-store-document
             "org.apache.jackrabbit.oak.plugins.document.spi",
 
             // oak-store-spi
-            "org.apache.jackrabbit.oak.json", "org.apache.jackrabbit.oak.plugins.memory",
-            "org.apache.jackrabbit.oak.plugins.value", "org.apache.jackrabbit.oak.plugins.value.jcr",
-            "org.apache.jackrabbit.oak.spi.cluster", "org.apache.jackrabbit.oak.spi.commit",
-            "org.apache.jackrabbit.oak.spi.filter", "org.apache.jackrabbit.oak.spi.lifecycle",
+            "org.apache.jackrabbit.oak.json",
+            "org.apache.jackrabbit.oak.plugins.memory",
+            "org.apache.jackrabbit.oak.plugins.value",
+            "org.apache.jackrabbit.oak.plugins.value.jcr",
+            "org.apache.jackrabbit.oak.spi.cluster",
+            "org.apache.jackrabbit.oak.spi.commit",
+            "org.apache.jackrabbit.oak.spi.filter",
+            "org.apache.jackrabbit.oak.spi.lifecycle",
             "org.apache.jackrabbit.oak.spi.state"));
 
     @Override
