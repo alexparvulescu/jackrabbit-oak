@@ -24,7 +24,7 @@
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
     <version>21</version>
-    <relativePath />
+    <relativePath/>
   </parent>
 
   <groupId>org.apache.jackrabbit</groupId>
@@ -40,7 +40,7 @@
     <skip.coverage>true</skip.coverage>
     <minimum.line.coverage>0.0</minimum.line.coverage>
     <minimum.branch.coverage>0.0</minimum.branch.coverage>
-    <known.issues />
+    <known.issues/>
     <project.reporting.outputEncoding>
       ${project.build.sourceEncoding}
     </project.reporting.outputEncoding>
@@ -49,7 +49,7 @@
     <mongo.port>27017</mongo.port>
     <mongo.db>MongoMKDB</mongo.db>
     <mongo.db2>MongoMKDB2</mongo.db2>
-    <mongo.url />
+    <mongo.url/>
     <mongo.version>3.6</mongo.version>
     <segment.db>SegmentMK</segment.db>
     <lucene.version>4.7.1</lucene.version>
@@ -59,7 +59,7 @@
     <slf4j.version>1.7.26</slf4j.version> <!-- sync with logback version -->
     <logback.version>1.2.3</logback.version>
     <h2.version>1.4.194</h2.version>
-    <tika.version>1.20</tika.version>
+    <tika.version>1.21</tika.version>
     <guava.version>15.0</guava.version>
     <guava.osgi.import>com.google.common.*;version="[15.0,21)"</guava.osgi.import>
     <derby.version>10.14.2.0</derby.version>
@@ -353,7 +353,7 @@
                     </goals>
                   </pluginExecutionFilter>
                   <action>
-                    <execute />
+                    <execute/>
                   </action>
                 </pluginExecution>
                 <pluginExecution>
@@ -366,7 +366,7 @@
                     </goals>
                   </pluginExecutionFilter>
                   <action>
-                    <ignore />
+                    <ignore/>
                   </action>
                 </pluginExecution>
               </pluginExecutions>
@@ -719,7 +719,7 @@
          <id>unittesting</id>
          <properties>
             <!-- emptying $fixtures means run on all -->
-            <fixtures />
+            <fixtures/>
          </properties>
          <build>
             <plugins>
@@ -765,7 +765,7 @@
    <profile>
       <id>release</id>
       <properties>
-         <nsfixtures />
+         <nsfixtures/>
          <rdb.jdbc-url>jdbc:derby:./target/derby-release-test;create=true</rdb.jdbc-url>
          <derby.stream.error.file>${project.build.directory}/derby.log</derby.stream.error.file>
       </properties>
@@ -1244,7 +1244,7 @@
               <executions>
                 <execution>
                   <id>animal-sniffer</id>
-                  <phase />
+                  <phase/>
                 </execution>
               </executions>
             </plugin>
