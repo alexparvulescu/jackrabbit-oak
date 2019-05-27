@@ -133,7 +133,7 @@
     <dependency>
       <groupId>org.apache.felix</groupId>
       <artifactId>org.apache.felix.webconsole</artifactId>
-      <version>4.2.10</version>
+      <version>4.3.12</version>
       <classifier>all</classifier>
     </dependency>
 
@@ -240,7 +240,7 @@
             <phase>package</phase>
             <configuration>
               <target>
-                <jar basedir="${project.build.outputDirectory}" destfile="${project.build.directory}/oak-webapp-${project.version}.jar" />
+                <jar basedir="${project.build.outputDirectory}" destfile="${project.build.directory}/oak-webapp-${project.version}.jar"/>
               </target>
             </configuration>
             <goals>
