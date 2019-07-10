@@ -31,7 +31,7 @@
   <name>Oak Runnable Jar</name>
 
   <properties>
-    <jetty.version>8.2.0.v20160908</jetty.version>
+    <jetty.version>9.3.24.v20180605</jetty.version>
     <groovy.version>2.4.7</groovy.version>
     <!--
       Size History:
@@ -123,8 +123,8 @@
                 as to ensure default artifact oak-run is the one which has all jars
                 embedded
                 -->
-                <copy file="${project.build.directory}/${project.build.finalName}-oak.jar" tofile="${project.build.directory}/${project.build.finalName}.jar" />
-                <delete file="${project.build.directory}/${project.build.finalName}-oak.jar" />
+                <copy file="${project.build.directory}/${project.build.finalName}-oak.jar" tofile="${project.build.directory}/${project.build.finalName}.jar"/>
+                <delete file="${project.build.directory}/${project.build.finalName}-oak.jar"/>
               </target>
             </configuration>
             <goals>
